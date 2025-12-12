@@ -1,0 +1,12 @@
+services:
+  collector:
+    image: otel/opentelemetry-collector:latest
+    volumes:
+      - ./otel-config.yaml:/etc/otelcol/config.yaml
+  tarunner:
+    build: ..
+    command:
+      - /var/ta
+      - http://collector:4318
+    volumes:
+      - ./ta/:/var/ta
