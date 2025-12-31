@@ -1,4 +1,4 @@
-package exporter
+package collector
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewExporter(logger *zap.Logger, endpoint string) (exporter.Logs, error) {
+func newExporter(logger *zap.Logger, endpoint string) (exporter.Logs, error) {
 	f := otlphttpexporter.NewFactory()
 	cfg := f.CreateDefaultConfig().(*otlphttpexporter.Config)
 	cfg.ClientConfig.Endpoint = endpoint
