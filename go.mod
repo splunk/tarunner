@@ -1,6 +1,6 @@
 module github.com/splunk/tarunner
 
-go 1.25.3
+go 1.26
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.145.0
