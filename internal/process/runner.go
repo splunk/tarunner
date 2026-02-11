@@ -84,6 +84,9 @@ func (r *Runner) Run(baseDir string) (bool, error) {
 				Resource:       pcommon.NewResource(),
 			},
 		}, cfg, r.next)
+		if err != nil {
+			return false, err
+		}
 	}
 	return result, nil
 }

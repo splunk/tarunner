@@ -1,6 +1,6 @@
 module github.com/splunk/tarunner
 
-go 1.26
+go 1.25.7
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.145.0
@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.145.0
 	go.opentelemetry.io/collector/pdata v1.51.0
 	go.opentelemetry.io/collector/receiver v1.51.0
-	go.opentelemetry.io/collector/receiver/otlpreceiver v0.142.0
+	go.opentelemetry.io/collector/receiver/otlpreceiver v0.145.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.145.0
 	go.opentelemetry.io/otel/metric v1.40.0
 	go.opentelemetry.io/otel/trace v1.40.0
@@ -63,10 +63,10 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector v0.145.0 // indirect
 	go.opentelemetry.io/collector/client v1.51.0 // indirect
-	go.opentelemetry.io/collector/component/componentstatus v0.142.0 // indirect
+	go.opentelemetry.io/collector/component/componentstatus v0.145.0 // indirect
 	go.opentelemetry.io/collector/config/configauth v1.51.0 // indirect
 	go.opentelemetry.io/collector/config/configcompression v1.51.0 // indirect
-	go.opentelemetry.io/collector/config/configgrpc v0.142.0 // indirect
+	go.opentelemetry.io/collector/config/configgrpc v0.145.0 // indirect
 	go.opentelemetry.io/collector/config/confighttp v0.145.0 // indirect
 	go.opentelemetry.io/collector/config/configmiddleware v1.51.0 // indirect
 	go.opentelemetry.io/collector/config/confignet v1.51.0 // indirect
@@ -87,8 +87,8 @@ require (
 	go.opentelemetry.io/collector/extension/xextension v0.145.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.51.0 // indirect
 	go.opentelemetry.io/collector/internal/componentalias v0.145.0 // indirect
-	go.opentelemetry.io/collector/internal/sharedcomponent v0.142.0 // indirect
-	go.opentelemetry.io/collector/internal/telemetry v0.142.0 // indirect
+	go.opentelemetry.io/collector/internal/sharedcomponent v0.145.0 // indirect
+	go.opentelemetry.io/collector/internal/telemetry v0.145.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.145.0 // indirect
 	go.opentelemetry.io/collector/pdata/xpdata v0.145.0 // indirect
 	go.opentelemetry.io/collector/pipeline v1.51.0 // indirect

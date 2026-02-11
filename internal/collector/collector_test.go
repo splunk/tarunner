@@ -20,7 +20,7 @@ func TestRunTA(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
 	http := cfg.HTTP.GetOrInsertDefault()
-	http.ServerConfig.Endpoint = "localhost:1337"
+	http.ServerConfig.NetAddr.Endpoint = "localhost:1337"
 
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestRunTA(t *testing.T) {
 func TestRunPeriodic(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -88,7 +88,7 @@ func TestRunPeriodic(t *testing.T) {
 func TestRunDisabled(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -107,7 +107,7 @@ func TestRunDisabled(t *testing.T) {
 func TestRunDisabledInterval(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -125,7 +125,7 @@ func TestRunDisabledInterval(t *testing.T) {
 func TestRunScriptedInputs(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())

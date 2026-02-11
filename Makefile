@@ -10,6 +10,12 @@ build:
 .PHONY := install-tools
 install-tools:
 	cd ./internal/tools && $(GOCMD) install go.opentelemetry.io/build-tools/chloggen
+	cd ./internal/tools && go install github.com/client9/misspell/cmd/misspell
+	cd ./internal/tools && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+	cd ./internal/tools && go install github.com/google/addlicense
+	cd ./internal/tools && go install golang.org/x/tools/cmd/goimports
+	cd ./internal/tools && go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment
+	cd ./internal/tools && go install mvdan.cc/gofumpt
 
 FILENAME?=$(shell git branch --show-current)
 .PHONY: chlog-new
