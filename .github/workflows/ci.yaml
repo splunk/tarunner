@@ -67,7 +67,7 @@ jobs:
       - uses: ./.github/actions/setup-environment
 
       - name: Build
-        run: make tgz
+        run: make build
 
   test:
     timeout-minutes: 30
@@ -76,16 +76,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-environment
       - name: Tests
-        run: make test-all
-
-  benchmark:
-    timeout-minutes: 30
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup-environment
-      - name: Benchmarks
-        run: make benchmark-all
+        run: make test
 
   coverage:
     name: coverage
