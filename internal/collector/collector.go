@@ -25,6 +25,10 @@ import (
 	"github.com/splunk/tarunner/internal/scriptreceiver"
 )
 
+// Run runs the collector with a baseDir working directory and an OTLP endpoint.
+// The function returns an error if the collector could not start.
+// The function returns a shutdown function handle if any work is scheduled,
+// or nil if the TA has no activity and is therefore safe to exit.
 func Run(baseDir, endpoint string) (func(), error) {
 	logger, err := zap.NewProduction()
 	if err != nil {
