@@ -37,6 +37,6 @@ chlog-update:
 %_build:
 	$(eval OS:=$(word 1,$(subst _, ,$@)))
 	$(eval ARCH:=$(word 2,$(subst _, ,$@)))
-	mkdir -p bin && cd cmd/tarunner && GOOS=$(OS) GOARCH=$(ARCH) $(GOCMD) build -o ../../bin/tarunner_$(OS)_$(ARCH) .
+	mkdir -p bin && cd cmd/tarunner && GOOS=$(OS) GOARCH=$(ARCH) $(GOCMD) build -o ../../bin/tarunner_$(OS)_$(ARCH)$(if $(filter-out windows,$(OS)),,.exe) .
 
 package: windows_amd64_build windows_arm64_build linux_amd64_build linux_arm64_build darwin_amd64_build darwin_arm64_build linux_ppc64le_build aix_ppc64_build
