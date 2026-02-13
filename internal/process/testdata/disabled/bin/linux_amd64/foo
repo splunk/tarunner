@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "foo1"
+sleep 1
+echo "foo2"
+sleep 1
+echo "foo3"
+sleep 1
+echo "foo4"
+sleep 1
+echo "foo5"
+sleep 1
+echo "foo6"
+sleep 1
+echo "foo7"
+sleep 1
+echo "foo8"
+sleep 1
+echo "foo9"
+sleep 1
+echo "foo10"
+sleep 1
