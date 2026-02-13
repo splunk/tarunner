@@ -151,8 +151,9 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, &scriptreceiver.Config{
-			Input:   input,
-			BaseDir: baseDir,
+			Input:     input,
+			BaseDir:   baseDir,
+			Transform: transform,
 		},
 			next)
 		return l, err
@@ -166,8 +167,9 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, monitorreceiver.Config{
-			Input:   input,
-			BaseDir: baseDir,
+			Input:     input,
+			BaseDir:   baseDir,
+			Transform: transform,
 		},
 			next)
 		return l, err

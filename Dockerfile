@@ -1,4 +1,4 @@
-from golang:1.25.5 as builder
+from golang:1.25.7 as builder
 
 COPY . .
 

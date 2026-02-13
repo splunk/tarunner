@@ -59,6 +59,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.145.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
 	github.com/rs/cors v1.11.1 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/valyala/fastjson v1.6.7 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector v0.145.0 // indirect

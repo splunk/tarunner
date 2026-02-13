@@ -7,8 +7,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/parser/regex"
 	"go.opentelemetry.io/collector/component"
+
+	"github.com/splunk/tarunner/internal/operator/transform"
 
 	"github.com/splunk/tarunner/internal/scriptedinput"
 	"github.com/splunk/tarunner/internal/scriptreceiver/internal/metadata"
@@ -35,12 +36,10 @@ func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(*Config)
 	var operators []operator.Config
 	if rcfg.Transform != nil {
-		r := regex.NewConfig()
+		r := transform.NewConfig()
 		r.Regex = rcfg.Transform.Regex
+		r.Replacement = rcfg.Transform.Format
 		operators = append(operators, operator.NewConfig(r))
-		if rcfg.Transform.Format != "" {
-			panic("not supported yet")
-		}
 	}
 
 	return adapter.BaseConfig{
