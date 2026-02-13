@@ -34,7 +34,6 @@ LINT=golangci-lint
 SRC_ROOT := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 ALL_PKG_DIRS := $(shell $(GOCMD) list -f '{{ .Dir }}' ./... | $(NORMALIZE_DIRS))
-
 ALL_SRC := $(shell find $(ALL_PKG_DIRS) -name '*.go' \
                                 -not -path '*/example/*' \
                                 -not -path '*/ta/*' \
