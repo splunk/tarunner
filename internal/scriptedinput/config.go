@@ -6,8 +6,9 @@ package scriptedinput
 import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
-	"github.com/splunk/tarunner/internal/conf"
 	"go.opentelemetry.io/collector/component"
+
+	"github.com/splunk/tarunner/internal/conf"
 )
 
 const operatorType = "scripted_input"
@@ -30,9 +31,9 @@ func NewConfigWithID(operatorID string) *Config {
 
 // Config is the configuration of a file input operator
 type Config struct {
-	helper.InputConfig `mapstructure:",squash"`
-	conf.Input         `mapstructure:",squash"`
 	BaseDir            string
+	conf.Input         `mapstructure:",squash"`
+	helper.InputConfig `mapstructure:",squash"`
 }
 
 // Build will build a file input operator from the supplied configuration

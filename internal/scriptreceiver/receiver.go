@@ -8,9 +8,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/parser/regex"
+	"go.opentelemetry.io/collector/component"
+
 	"github.com/splunk/tarunner/internal/scriptedinput"
 	"github.com/splunk/tarunner/internal/scriptreceiver/internal/metadata"
-	"go.opentelemetry.io/collector/component"
 )
 
 type receiverType struct{}

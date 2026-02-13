@@ -4,16 +4,18 @@
 package monitorreceiver
 
 import (
+	"net/url"
+	"path/filepath"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/parser/regex"
+	"go.opentelemetry.io/collector/component"
+
 	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/monitorreceiver/internal/metadata"
-	"go.opentelemetry.io/collector/component"
-	"net/url"
-	"path/filepath"
 )
 
 type receiverType struct{}

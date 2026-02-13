@@ -8,10 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/plog"
 	"io"
 	"net/url"
 	"os"
@@ -21,6 +17,11 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/plog"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
 	"go.opentelemetry.io/collector/receiver"
@@ -241,7 +242,6 @@ func determineCommandName(baseDir string, input conf.Input) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown scheme %q", parsed.Scheme)
 	}
-
 }
 
 func (r *Runner) Shutdown() {

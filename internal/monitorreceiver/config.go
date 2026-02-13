@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
+	Transform *conf.Transform `mapstructure:"transform"`
 	BaseDir   string          `mapstructure:"base_dir"`
 	Input     conf.Input      `mapstructure:"input"`
-	Transform *conf.Transform `mapstructure:"transform"`
 }

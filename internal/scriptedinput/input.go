@@ -7,11 +7,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
-	"github.com/splunk/tarunner/internal/conf"
-	"go.uber.org/zap"
 	"io"
 	"net/url"
 	"os/exec"
@@ -20,14 +15,21 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
+	"go.uber.org/zap"
+
+	"github.com/splunk/tarunner/internal/conf"
 )
 
 type ScriptedInput struct {
-	helper.InputOperator
-	cfg      Config
 	logger   *zap.Logger
 	doneChan chan struct{}
 	command  *exec.Cmd
+	cfg      Config
+	helper.InputOperator
 }
 
 func (si *ScriptedInput) Start(_ operator.Persister) error {
@@ -181,5 +183,4 @@ func determineCommandName(baseDir string, input conf.Input) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown scheme %q", parsed.Scheme)
 	}
-
 }

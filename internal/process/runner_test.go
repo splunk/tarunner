@@ -4,13 +4,14 @@
 package process
 
 import (
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.uber.org/zap"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 func TestRunTA(t *testing.T) {

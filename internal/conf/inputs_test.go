@@ -4,11 +4,12 @@
 package conf
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOneInput(t *testing.T) {
@@ -24,7 +25,8 @@ func TestOneInput(t *testing.T) {
 			SessionKey:    "",
 			CheckpointDir: "",
 			Configuration: Configuration{
-				Stanza: Stanza{Name: "otlpinput", App: "tarunner",
+				Stanza: Stanza{
+					Name: "otlpinput", App: "tarunner",
 					Params: []Param{{
 						Name:  "start_by_shell",
 						Value: "false",
@@ -37,7 +39,8 @@ func TestOneInput(t *testing.T) {
 					}, {Name: "http_port", Value: "4318"}, {
 						Name:  "listen_address",
 						Value: "0.0.0.0",
-					}}},
+					}},
+				},
 			},
 		}},
 		res,
@@ -55,7 +58,8 @@ func TestTwoInputs(t *testing.T) {
 		SessionKey:    "",
 		CheckpointDir: "",
 		Configuration: Configuration{
-			Stanza: Stanza{Name: "otlpinput", App: "tarunner",
+			Stanza: Stanza{
+				Name: "otlpinput", App: "tarunner",
 				Params: []Param{{
 					Name:  "start_by_shell",
 					Value: "false",
@@ -86,20 +90,22 @@ func TestTwoInputs(t *testing.T) {
 		SessionKey:    "",
 		CheckpointDir: "",
 		Configuration: Configuration{
-			Stanza: Stanza{Name: "otlpinput/2", App: "tarunner",
-				Params: []Param{{
-					Name:  "start_by_shell",
-					Value: "true",
-				}, {Name: "interval", Value: "0"}, {
-					Name:  "sourcetype",
-					Value: "foo",
-				}, {Name: "index", Value: "nondefault"}, {
-					Name:  "grpc_port",
-					Value: "1111",
-				}, {Name: "http_port", Value: "1112"}, {
-					Name:  "listen_address",
-					Value: "127.0.0.1",
-				},
+			Stanza: Stanza{
+				Name: "otlpinput/2", App: "tarunner",
+				Params: []Param{
+					{
+						Name:  "start_by_shell",
+						Value: "true",
+					}, {Name: "interval", Value: "0"}, {
+						Name:  "sourcetype",
+						Value: "foo",
+					}, {Name: "index", Value: "nondefault"}, {
+						Name:  "grpc_port",
+						Value: "1111",
+					}, {Name: "http_port", Value: "1112"}, {
+						Name:  "listen_address",
+						Value: "127.0.0.1",
+					},
 				},
 			},
 		},

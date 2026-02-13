@@ -7,9 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/splunk/tarunner/internal/conf"
-	"github.com/splunk/tarunner/internal/monitorreceiver"
-	"github.com/splunk/tarunner/internal/scriptreceiver"
+	"net/url"
+	"os"
+	"path/filepath"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
@@ -18,12 +19,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
-	"net/url"
-	"os"
-	"path/filepath"
+
+	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/internal/monitorreceiver"
+	"github.com/splunk/tarunner/internal/scriptreceiver"
 )
 
-func Run(baseDir string, endpoint string) (func(), error) {
+func Run(baseDir, endpoint string) (func(), error) {
 	logger, err := zap.NewProduction()
 	if err != nil {
 		return nil, err
