@@ -1,3 +1,8 @@
+// Copyright Splunk, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+//go:build tools
+
 package tools
 
 // based on https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/internal/tools/tools.go
