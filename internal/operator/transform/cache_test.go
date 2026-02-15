@@ -20,13 +20,13 @@ func TestNewMemoryCache(t *testing.T) {
 		maxSize    uint16
 	}{
 		{
-			"size-50",
-			50,
-			&memoryCache{
+			name:       "size-50",
+			expectSize: 50,
+			expect: &memoryCache{
 				cache: make(map[string]any),
 				keys:  make(chan string, 50),
 			},
-			50,
+			maxSize: 50,
 		},
 	}
 
@@ -48,18 +48,18 @@ func TestMemory(t *testing.T) {
 		name   string
 	}{
 		{
-			"basic",
-			func() *memoryCache {
+			name: "basic",
+			cache: func() *memoryCache {
 				return newMemoryCache(3, 0)
 			}(),
-			map[string]any{
+			input: map[string]any{
 				"key": "value",
 				"map-value": map[string]string{
 					"x":   "y",
 					"dev": "stanza",
 				},
 			},
-			&memoryCache{
+			expect: &memoryCache{
 				cache: map[string]any{
 					"key": "value",
 					"map-value": map[string]string{

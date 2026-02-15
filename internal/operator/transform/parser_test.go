@@ -75,14 +75,14 @@ func TestParserRegex(t *testing.T) {
 		name      string
 	}{
 		{
-			"RootString",
-			func(p *Config) {
+			name: "RootString",
+			configure: func(p *Config) {
 				p.Regex = "a=(?P<a>.*)"
 			},
-			&entry.Entry{
+			input: &entry.Entry{
 				Body: "a=b",
 			},
-			&entry.Entry{
+			expected: &entry.Entry{
 				Body: "a=b",
 				Attributes: map[string]any{
 					"a": "b",
@@ -90,15 +90,15 @@ func TestParserRegex(t *testing.T) {
 			},
 		},
 		{
-			"MemeoryCache",
-			func(p *Config) {
+			name: "MemeoryCache",
+			configure: func(p *Config) {
 				p.Regex = "a=(?P<a>.*)"
 				p.Cache.Size = 100
 			},
-			&entry.Entry{
+			input: &entry.Entry{
 				Body: "a=b",
 			},
-			&entry.Entry{
+			expected: &entry.Entry{
 				Body: "a=b",
 				Attributes: map[string]any{
 					"a": "b",
@@ -106,15 +106,15 @@ func TestParserRegex(t *testing.T) {
 			},
 		},
 		{
-			"K8sFileCache",
-			func(p *Config) {
+			name: "K8sFileCache",
+			configure: func(p *Config) {
 				p.Regex = `^(?P<pod_name>[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?P<namespace>[^_]+)_(?P<container_name>.+)-(?P<container_id>[a-z0-9]{64})\.log$`
 				p.Cache.Size = 100
 			},
-			&entry.Entry{
+			input: &entry.Entry{
 				Body: "coredns-5644d7b6d9-mzngq_kube-system_coredns-901f7510281180a402936c92f5bc0f3557f5a21ccb5a4591c5bf98f3ddbffdd6.log",
 			},
-			&entry.Entry{
+			expected: &entry.Entry{
 				Body: "coredns-5644d7b6d9-mzngq_kube-system_coredns-901f7510281180a402936c92f5bc0f3557f5a21ccb5a4591c5bf98f3ddbffdd6.log",
 				Attributes: map[string]any{
 					"container_id":   "901f7510281180a402936c92f5bc0f3557f5a21ccb5a4591c5bf98f3ddbffdd6",
