@@ -1,0 +1,85 @@
+// Copyright Splunk, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+package scriptedinput
+
+import (
+	"testing"
+	"time"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component/componenttest"
+	"go.uber.org/zap"
+
+	"github.com/splunk/tarunner/internal/conf"
+)
+
+func Test_ScriptedInput(t *testing.T) {
+	tests := []struct {
+		name      string
+		interval  string
+		expectMsg bool
+	}{
+		{
+			"always",
+			"0",
+			true,
+		},
+		{
+			"polling",
+			"1",
+			true,
+		},
+		{
+			"disabled",
+			"-1",
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := NewConfig()
+			c.BaseDir = "testdata"
+			c.Input = conf.Input{
+				Configuration: conf.Configuration{
+					Stanza: conf.Stanza{
+						Name: "script://./bin/foo.sh",
+						Params: []conf.Param{
+							{Name: "interval", Value: test.interval},
+						},
+					},
+				},
+			}
+			settings := componenttest.NewNopTelemetrySettings()
+			settings.Logger, _ = zap.NewDevelopment()
+			o, err := c.Build(settings)
+			assert.NoError(t, err)
+			require.NotNil(t, o)
+			fo := testutil.NewFakeOutput(t)
+			require.NoError(t, fo.Start(nil))
+			t.Cleanup(func() {
+				require.NoError(t, fo.Stop())
+			})
+			o.SetOutputIDs([]string{fo.ID()})
+			err = o.SetOutputs([]operator.Operator{
+				fo,
+			})
+			require.NoError(t, err)
+			err = o.Start(nil)
+			require.NoError(t, err)
+			if test.expectMsg {
+				msg := <-fo.Received
+				require.NotNil(t, msg)
+				require.Equal(t, "foo\n", msg.Body)
+			} else {
+				time.Sleep(time.Millisecond * 100)
+				require.Len(t, fo.Received, 0)
+			}
+			require.NoError(t, o.Stop())
+		})
+	}
+}
