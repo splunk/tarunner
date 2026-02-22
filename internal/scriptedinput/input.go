@@ -10,11 +10,11 @@ import (
 	"io"
 	"net/url"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/splunk/tarunner/internal/script"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
@@ -116,7 +116,7 @@ func (si *ScriptedInput) execute(baseDir string, input conf.Input) {
 }
 
 func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
-	command, err := determineCommandName(baseDir, input)
+	command, err := script.DetermineCommandName(baseDir, input)
 	if err != nil {
 		return err
 	}
@@ -168,19 +168,4 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 	si.command = cmd
 
 	return cmd.Wait()
-}
-
-func determineCommandName(baseDir string, input conf.Input) (string, error) {
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
-	if err != nil {
-		return "", err
-	}
-	switch parsed.Scheme {
-	case "script":
-		return filepath.Join(baseDir, parsed.Path), nil
-	case "":
-		return filepath.Join(baseDir, "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), input.Configuration.Stanza.Name), nil
-	default:
-		return "", fmt.Errorf("unknown scheme %q", parsed.Scheme)
-	}
 }

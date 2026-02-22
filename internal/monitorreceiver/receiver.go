@@ -4,8 +4,9 @@
 package monitorreceiver
 
 import (
-	"net/url"
 	"path/filepath"
+
+	"github.com/splunk/tarunner/internal/script"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
 	"go.opentelemetry.io/collector/component"
 
-	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/monitorreceiver/internal/metadata"
 )
 
@@ -54,7 +54,7 @@ func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 func (t receiverType) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(*Config)
 	oc := file.NewConfig()
-	path, err := getPath(rcfg.BaseDir, rcfg.Input)
+	path, err := script.DetermineCommandName(rcfg.BaseDir, rcfg.Input)
 	if err != nil {
 		return operator.NewConfig(oc)
 	}
@@ -82,16 +82,4 @@ func (t receiverType) InputConfig(config component.Config) operator.Config {
 	}
 	rcfg.Input.Configuration.Stanza.Params.Get("sourcetype")
 	return operator.NewConfig(oc)
-}
-
-func getPath(baseDir string, input conf.Input) (string, error) {
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
-	if err != nil {
-		return "", err
-	}
-	if filepath.IsAbs(parsed.Path) {
-		return parsed.Path, nil
-	} else {
-		return filepath.Join(baseDir, parsed.Path), nil
-	}
 }
