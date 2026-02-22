@@ -10,8 +10,11 @@ It exports all data over the OpenTelemetry Protocol (OTLP).
 
 * Download the binary from the [latest release](https://github.com/splunk/tarunner/releases)
 * Run the binary with the following arguments:
+  
   `> tarunner <basedir> <otlp-endpoint>`
+  
   `basedir`: the location of the technical addon, uncompressed.
+  
   `otlp-endpoint`: the OTLP gRPC endpoint to target with the runner. Example: `http://localhost:4317`
 
 ## Using Docker
@@ -21,7 +24,6 @@ Build the Docker image:
 
 Run the image:
 * `> docker run --rm -v $(pwd)/ta:/ta /ta http://endpoint:4317`
-
 
 See also under the `integration` folder a `docker-compose.yml` example.
 
