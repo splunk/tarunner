@@ -72,9 +72,13 @@ func Test_ScriptedInput(t *testing.T) {
 			err = o.Start(nil)
 			require.NoError(t, err)
 			if test.expectMsg {
-				msg := <-fo.Received
-				require.NotNil(t, msg)
-				require.Equal(t, "foo\n", msg.Body)
+				select {
+				case msg := <-fo.Received:
+					require.NotNil(t, msg)
+					require.Equal(t, "foo\n", msg.Body)
+				case <-time.After(5 * time.Second):
+					require.Fail(t, "timed out waiting for message")
+				}
 			} else {
 				time.Sleep(time.Millisecond * 100)
 				require.Len(t, fo.Received, 0)

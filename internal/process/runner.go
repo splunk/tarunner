@@ -13,10 +13,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/splunk/tarunner/internal/script"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -162,7 +163,7 @@ func (r *Runner) execute(baseDir string, input conf.Input) {
 }
 
 func (r *Runner) _execute(baseDir string, input conf.Input) error {
-	command, err := determineCommandName(baseDir, input)
+	command, err := script.DetermineCommandName(baseDir, input)
 	if err != nil {
 		return err
 	}
@@ -229,21 +230,6 @@ func (r *Runner) _execute(baseDir string, input conf.Input) error {
 	return cmd.Wait()
 }
 
-func determineCommandName(baseDir string, input conf.Input) (string, error) {
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
-	if err != nil {
-		return "", err
-	}
-	switch parsed.Scheme {
-	case "script":
-		return filepath.Join(baseDir, parsed.Path), nil
-	case "":
-		return filepath.Join(baseDir, "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), input.Configuration.Stanza.Name), nil
-	default:
-		return "", fmt.Errorf("unknown scheme %q", parsed.Scheme)
-	}
-}
-
 func (r *Runner) Shutdown() {
 	for _, cmd := range r.commands {
 		_ = cmd.Process.Signal(syscall.SIGTERM)
@@ -263,10 +249,10 @@ func (r *Runner) addPath(baseDir string, input conf.Input) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if filepath.IsAbs(parsed.Path) {
-		r.monitoredPaths = append(r.monitoredPaths, parsed.Path)
-	} else {
-		r.monitoredPaths = append(r.monitoredPaths, filepath.Join(baseDir, parsed.Path))
+	path, err := script.GetPath(baseDir, parsed.Path)
+	if err != nil {
+		return false, err
 	}
+	r.monitoredPaths = append(r.monitoredPaths, path)
 	return true, nil
 }
