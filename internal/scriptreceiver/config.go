@@ -8,5 +8,7 @@ import "github.com/splunk/tarunner/internal/conf"
 type Config struct {
 	Transform *conf.Transform `mapstructure:"-"`
 	BaseDir   string          `mapstructure:"-"`
-	Input     conf.Input      `mapstructure:"-"`
+
+	Props      []conf.Prop
+	conf.Input `mapstructure:"-"`
 }
