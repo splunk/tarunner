@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/splunk/tarunner/internal/conf"
+
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 
@@ -16,7 +18,7 @@ import (
 
 func BenchmarkProcessBatch(b *testing.B) {
 	b.Run("SeverityMapping", func(b *testing.B) {
-		config := NewConfig()
+		config := NewConfig(conf.Transform{Name: "test"})
 		config.OnError = helper.SendOnError
 		config.Regex = `(?P<remote_host>[^\s]+) - (?P<remote_user>[^\s]+) \[(?P<timestamp>[^\]]+)\] "(?P<http_method>[A-Z]+) (?P<path>[^\s]+) [^"]+" (?P<http_status>\d+) (?P<bytes_sent>[^\s]+)`
 		config.TimeParser = &helper.TimeParser{

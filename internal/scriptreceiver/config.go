@@ -6,9 +6,8 @@ package scriptreceiver
 import "github.com/splunk/tarunner/internal/conf"
 
 type Config struct {
-	Transform *conf.Transform `mapstructure:"-"`
-	BaseDir   string          `mapstructure:"-"`
-
-	Props      []conf.Prop
+	BaseDir    string           `mapstructure:"-"`
+	Props      []conf.Prop      `mapstructure:"-"`
+	Transforms []conf.Transform `mapstructure:"-"`
 	conf.Input `mapstructure:"-"`
 }

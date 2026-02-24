@@ -7,7 +7,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"go.opentelemetry.io/collector/component"
+
+	"github.com/splunk/tarunner/internal/operator/prop"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -35,12 +38,18 @@ func createDefaultConfig() *Config {
 func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(*Config)
 	var operators []operator.Config
-	if rcfg.Transform != nil {
-		r := transform.NewConfig()
-		r.Regex = rcfg.Transform.Regex
-		r.Replacement = rcfg.Transform.Format
+	for _, p := range rcfg.Props {
+		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
+		operators = append(operators, ops...)
+	}
+	for _, t := range rcfg.Transforms {
+		r := transform.NewConfig(t)
+
 		operators = append(operators, operator.NewConfig(r))
 	}
+
+	endNoop := noop.NewConfigWithID("end")
+	operators = append(operators, operator.NewConfig(endNoop))
 
 	return adapter.BaseConfig{
 		Operators: operators,

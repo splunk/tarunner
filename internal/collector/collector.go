@@ -92,15 +92,7 @@ func createReceivers(inputs []conf.Input, transforms []conf.Transform, props []c
 		if disabled != nil && disabled.Value == "1" {
 			continue
 		}
-		var transform *conf.Transform
-		if sourceType := input.Configuration.Stanza.Params.Get("sourcetype"); sourceType != nil {
-			for _, t := range transforms {
-				if t.Name == sourceType.Value {
-					transform = &t
-				}
-			}
-		}
-		l, err := createReceiver(baseDir, next, input, transform, props, logger, meterProvider, tracerProvider)
+		l, err := createReceiver(baseDir, next, input, transforms, props, logger, meterProvider, tracerProvider)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +146,7 @@ func readProps(baseDir string) ([]conf.Prop, error) {
 	return conf.ReadProps(b)
 }
 
-func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transform *conf.Transform, props []conf.Prop, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
+func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
 	parsed, err := url.Parse(input.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
@@ -170,10 +162,10 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, &scriptreceiver.Config{
-			Input:     input,
-			BaseDir:   baseDir,
-			Transform: transform,
-			Props:     props,
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
 		},
 			next)
 		return l, err
@@ -187,10 +179,10 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, monitorreceiver.Config{
-			Input:     input,
-			BaseDir:   baseDir,
-			Transform: transform,
-			Props:     props,
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
 		},
 			next)
 		return l, err

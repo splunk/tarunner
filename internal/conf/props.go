@@ -3,16 +3,60 @@
 
 package conf
 
-import "gopkg.in/ini.v1"
+import (
+	"regexp"
+	"sort"
+	"strings"
+
+	"gopkg.in/ini.v1"
+)
+
+type PropType int
+
+const (
+	Source = iota
+	Host
+	SourceType
+	Default
+)
+
+var fieldAliasRegex = regexp.MustCompile(`(\w+) as (\w+)`)
 
 type Prop struct {
 	Name                  string
 	TimePrefix            string
 	TimeFormat            string
-	MaxTimestampLookAhead int
 	DatetimeConfig        string
-	NoBinaryCheck         bool
 	Category              string
+	SourceType            string
+	FieldAliases          []FieldAlias
+	Transforms            []PropsTransforms
+	MaxTimestampLookAhead int
+	NoBinaryCheck         bool
+}
+
+type FieldAlias struct {
+	Name string
+	From string
+	To   string
+}
+
+type PropsTransforms struct {
+	Class  string
+	Stanza []string
+}
+
+func (p *Prop) Type() PropType {
+	switch {
+	case strings.HasPrefix(p.Name, "source::"):
+		return Source
+	case strings.HasPrefix(p.Name, "host::"):
+		return Host
+	case p.Name == "default":
+		return Default
+	default:
+		return SourceType
+	}
 }
 
 func ReadProps(payload []byte) ([]Prop, error) {
@@ -24,7 +68,7 @@ func ReadProps(payload []byte) ([]Prop, error) {
 	s := 0
 	for _, section := range f.Sections() {
 		if section.Name() == ini.DefaultSection {
-			continue // disregard default section. We need a stanza per transform.
+			continue // disregard default section. We need a stanza per prop.
 		}
 		maxTimestampLookAhead, err := section.Key("MAX_TIMESTAMP_LOOKAHEAD").Int()
 		if err != nil {
@@ -42,11 +86,71 @@ func ReadProps(payload []byte) ([]Prop, error) {
 			DatetimeConfig:        section.Key("DATETIME_CONFIG").String(),
 			NoBinaryCheck:         noBinaryCheck,
 			Category:              section.Key("category").String(),
+			SourceType:            section.Key("sourcetype").String(),
+			FieldAliases:          readFieldAliases(section),
+			Transforms:            readPropsTransforms(section),
 		}
 
 		result[s] = p
 		s++
 	}
 
+	orderProps(result)
 	return result, nil
+}
+
+func readPropsTransforms(section *ini.Section) []PropsTransforms {
+	var result []PropsTransforms
+	for _, key := range section.Keys() {
+		if strings.HasPrefix(key.Name(), "TRANSFORMS-") {
+			values := strings.Split(key.Value(), ",")
+			transformStanzas := make([]string, len(values))
+			for i, value := range values {
+				transformStanzas[i] = strings.TrimSpace(value)
+			}
+			result = append(result, PropsTransforms{
+				Class:  key.Name(),
+				Stanza: transformStanzas,
+			})
+		}
+	}
+	return result
+}
+
+func readFieldAliases(section *ini.Section) []FieldAlias {
+	var result []FieldAlias
+	for _, key := range section.Keys() {
+		if strings.HasPrefix(key.Name(), "FIELDALIAS-") {
+			from, to := parseFieldAliasExpr(key.Value())
+			result = append(result, FieldAlias{
+				Name: key.Name(),
+				From: from,
+				To:   to,
+			})
+		}
+	}
+	return result
+}
+
+// parseFieldAliasExpr reads an expression such as `sender as src_user`
+// and return from and to fields
+func parseFieldAliasExpr(expr string) (string, string) {
+	captures := fieldAliasRegex.FindStringSubmatch(expr)
+	return captures[1], captures[2]
+}
+
+// orderProps orders props from more specific to more general.
+// For settings that are specified in multiple categories of matching [<spec>]
+// stanzas, [host::<host>] settings override [<sourcetype>] settings.
+// Additionally, [source::<source>] settings override both [host::<host>]
+// and [<sourcetype>] settings.
+func orderProps(props []Prop) {
+	sort.Slice(props, func(i, j int) bool {
+		ti := props[i].Type()
+		tj := props[j].Type()
+		if ti == tj {
+			return props[i].Name < props[j].Name
+		}
+		return ti < tj
+	})
 }
