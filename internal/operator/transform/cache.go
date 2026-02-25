@@ -46,7 +46,7 @@ type memoryCache struct {
 	mutex   sync.RWMutex
 }
 
-var _ cache = (&memoryCache{})
+var _ cache = &memoryCache{}
 
 // get returns a cached entry, nil if it does not exist
 func (m *memoryCache) get(key string) any {

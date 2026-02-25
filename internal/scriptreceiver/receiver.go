@@ -7,9 +7,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"go.opentelemetry.io/collector/component"
 
-	"github.com/splunk/tarunner/internal/operator/transform"
+	"github.com/splunk/tarunner/internal/operator/prop"
 
 	"github.com/splunk/tarunner/internal/scriptedinput"
 	"github.com/splunk/tarunner/internal/scriptreceiver/internal/metadata"
@@ -35,12 +36,13 @@ func createDefaultConfig() *Config {
 func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(*Config)
 	var operators []operator.Config
-	if rcfg.Transform != nil {
-		r := transform.NewConfig()
-		r.Regex = rcfg.Transform.Regex
-		r.Replacement = rcfg.Transform.Format
-		operators = append(operators, operator.NewConfig(r))
+	for _, p := range rcfg.Props {
+		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
+		operators = append(operators, ops...)
 	}
+
+	endNoop := noop.NewConfigWithID("end")
+	operators = append(operators, operator.NewConfig(endNoop))
 
 	return adapter.BaseConfig{
 		Operators: operators,
@@ -54,18 +56,18 @@ func (t receiverType) InputConfig(config component.Config) operator.Config {
 	oc.BaseDir = rcfg.BaseDir
 
 	index := "main"
-	if indexParam := rcfg.Input.Configuration.Stanza.Params.Get("index"); indexParam != nil {
+	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
 		index = indexParam.Value
 	}
 
 	sourcetype := ""
-	if sourceTypeParam := rcfg.Input.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
+	if sourceTypeParam := rcfg.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
 		sourcetype = sourceTypeParam.Value
 	}
 	oc.Attributes = map[string]helper.ExprStringConfig{
 		"com.splunk.index":      helper.ExprStringConfig(index),
 		"com.splunk.sourcetype": helper.ExprStringConfig(sourcetype),
-		"com.splunk.source":     helper.ExprStringConfig(rcfg.Input.Configuration.Stanza.Name),
+		"com.splunk.source":     helper.ExprStringConfig(rcfg.Configuration.Stanza.Name),
 	}
 	return operator.NewConfig(oc)
 }

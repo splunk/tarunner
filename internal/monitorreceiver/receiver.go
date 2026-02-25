@@ -6,9 +6,11 @@ package monitorreceiver
 import (
 	"path/filepath"
 
-	"github.com/splunk/tarunner/internal/script"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 
-	"github.com/splunk/tarunner/internal/operator/transform"
+	"github.com/splunk/tarunner/internal/operator/prop"
+
+	"github.com/splunk/tarunner/internal/script"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
@@ -35,16 +37,18 @@ func createDefaultConfig() *Config {
 	return &Config{}
 }
 
-// BaseConfig gets the base config from config, for now
+// BaseConfig gets the base config from config
 func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(*Config)
 	var operators []operator.Config
-	if rcfg.Transform != nil {
-		r := transform.NewConfig()
-		r.Regex = rcfg.Transform.Regex
-		r.Replacement = rcfg.Transform.Format
-		operators = append(operators, operator.NewConfig(r))
+
+	for _, p := range rcfg.Props {
+		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
+		operators = append(operators, ops...)
 	}
+
+	endNoop := noop.NewConfigWithID("end")
+	operators = append(operators, operator.NewConfig(endNoop))
 
 	return adapter.BaseConfig{
 		Operators: operators,
@@ -80,6 +84,6 @@ func (t receiverType) InputConfig(config component.Config) operator.Config {
 		"com.splunk.sourcetype": helper.ExprStringConfig(sourcetype),
 		"com.splunk.source":     helper.ExprStringConfig(rcfg.Input.Configuration.Stanza.Name),
 	}
-	rcfg.Input.Configuration.Stanza.Params.Get("sourcetype")
+	oc.IncludeFilePath = true
 	return operator.NewConfig(oc)
 }

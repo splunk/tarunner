@@ -48,8 +48,12 @@ func Run(baseDir, endpoint string) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
+	props, err := readProps(baseDir)
+	if err != nil {
+		return nil, err
+	}
 
-	receivers, err := createReceivers(inputs, transforms, baseDir, e, logger, meterProvider, tracerProvider)
+	receivers, err := createReceivers(inputs, transforms, props, baseDir, e, logger, meterProvider, tracerProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -81,22 +85,14 @@ func Run(baseDir, endpoint string) (func(), error) {
 	return shutDownFunc, nil
 }
 
-func createReceivers(inputs []conf.Input, transforms []conf.Transform, baseDir string, next consumer.Logs, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) ([]receiver.Logs, error) {
+func createReceivers(inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
 		disabled := input.Configuration.Stanza.Params.Get("disabled")
 		if disabled != nil && disabled.Value == "1" {
 			continue
 		}
-		var transform *conf.Transform
-		if sourceType := input.Configuration.Stanza.Params.Get("sourcetype"); sourceType != nil {
-			for _, t := range transforms {
-				if t.Name == sourceType.Value {
-					transform = &t
-				}
-			}
-		}
-		l, err := createReceiver(baseDir, next, input, transform, logger, meterProvider, tracerProvider)
+		l, err := createReceiver(baseDir, next, input, transforms, props, logger, meterProvider, tracerProvider)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +131,22 @@ func readTransforms(baseDir string) ([]conf.Transform, error) {
 	return conf.ReadTransforms(b)
 }
 
-func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transform *conf.Transform, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
+func readProps(baseDir string) ([]conf.Prop, error) {
+	fileToRead := filepath.Join(baseDir, "local", "props.conf")
+	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+		fileToRead = filepath.Join(baseDir, "default", "props.conf")
+		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+	}
+	b, err := os.ReadFile(fileToRead)
+	if err != nil {
+		return nil, err
+	}
+	return conf.ReadProps(b)
+}
+
+func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
 	parsed, err := url.Parse(input.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
@@ -151,9 +162,10 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, &scriptreceiver.Config{
-			Input:     input,
-			BaseDir:   baseDir,
-			Transform: transform,
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
 		},
 			next)
 		return l, err
@@ -167,9 +179,10 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, monitorreceiver.Config{
-			Input:     input,
-			BaseDir:   baseDir,
-			Transform: transform,
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
 		},
 			next)
 		return l, err

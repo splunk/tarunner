@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/splunk/tarunner/internal/conf"
+
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
@@ -16,25 +18,17 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 )
 
-const operatorType = "regex_parser"
+const operatorType = "transform"
 
-func init() {
-	operator.Register(operatorType, func() operator.Builder { return NewConfig() })
-}
-
-// NewConfig creates a new regex parser config with default values
-func NewConfig() *Config {
-	return NewConfigWithID(operatorType)
-}
-
-// NewConfigWithID creates a new regex parser config with default values
-func NewConfigWithID(operatorID string) *Config {
+func NewConfig(scope string, t conf.Transform) *Config {
 	return &Config{
-		ParserConfig: helper.NewParserConfig(operatorID, operatorType),
+		Regex:        t.Regex,
+		Replacement:  t.Format,
+		ParserConfig: helper.NewParserConfig(fmt.Sprintf("transforms-%q-%q", scope, t.Name), operatorType),
 	}
 }
 
-// Config is the configuration of a regex parser operator.
+// Config is the configuration of a transform operator.
 type Config struct {
 	helper.ParserConfig `mapstructure:",squash"`
 
@@ -46,7 +40,7 @@ type Config struct {
 	} `mapstructure:"cache"`
 }
 
-// Build will build a regex parser operator.
+// Build will build a transform operator.
 func (c Config) Build(set component.TelemetrySettings) (operator.Operator, error) {
 	parserOperator, err := c.ParserConfig.Build(set)
 	if err != nil {
