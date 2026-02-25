@@ -56,18 +56,18 @@ func (t receiverType) InputConfig(config component.Config) operator.Config {
 	oc.BaseDir = rcfg.BaseDir
 
 	index := "main"
-	if indexParam := rcfg.Input.Configuration.Stanza.Params.Get("index"); indexParam != nil {
+	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
 		index = indexParam.Value
 	}
 
 	sourcetype := ""
-	if sourceTypeParam := rcfg.Input.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
+	if sourceTypeParam := rcfg.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
 		sourcetype = sourceTypeParam.Value
 	}
 	oc.Attributes = map[string]helper.ExprStringConfig{
 		"com.splunk.index":      helper.ExprStringConfig(index),
 		"com.splunk.sourcetype": helper.ExprStringConfig(sourcetype),
-		"com.splunk.source":     helper.ExprStringConfig(rcfg.Input.Configuration.Stanza.Name),
+		"com.splunk.source":     helper.ExprStringConfig(rcfg.Configuration.Stanza.Name),
 	}
 	return operator.NewConfig(oc)
 }
