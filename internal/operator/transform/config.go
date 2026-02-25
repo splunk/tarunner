@@ -20,11 +20,11 @@ import (
 
 const operatorType = "transform"
 
-func NewConfig(t conf.Transform) *Config {
+func NewConfig(scope string, t conf.Transform) *Config {
 	return &Config{
 		Regex:        t.Regex,
 		Replacement:  t.Format,
-		ParserConfig: helper.NewParserConfig(t.Name, operatorType),
+		ParserConfig: helper.NewParserConfig(fmt.Sprintf("transforms-%q-%q", scope, t.Name), operatorType),
 	}
 }
 

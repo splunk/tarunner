@@ -12,8 +12,6 @@ import (
 
 	"github.com/splunk/tarunner/internal/operator/prop"
 
-	"github.com/splunk/tarunner/internal/operator/transform"
-
 	"github.com/splunk/tarunner/internal/scriptedinput"
 	"github.com/splunk/tarunner/internal/scriptreceiver/internal/metadata"
 )
@@ -41,11 +39,6 @@ func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	for _, p := range rcfg.Props {
 		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
 		operators = append(operators, ops...)
-	}
-	for _, t := range rcfg.Transforms {
-		r := transform.NewConfig(t)
-
-		operators = append(operators, operator.NewConfig(r))
 	}
 
 	endNoop := noop.NewConfigWithID("end")

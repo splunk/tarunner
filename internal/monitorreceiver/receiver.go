@@ -12,8 +12,6 @@ import (
 
 	"github.com/splunk/tarunner/internal/script"
 
-	"github.com/splunk/tarunner/internal/operator/transform"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
@@ -47,11 +45,6 @@ func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	for _, p := range rcfg.Props {
 		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
 		operators = append(operators, ops...)
-	}
-	for _, t := range rcfg.Transforms {
-		r := transform.NewConfig(t)
-
-		operators = append(operators, operator.NewConfig(r))
 	}
 
 	endNoop := noop.NewConfigWithID("end")

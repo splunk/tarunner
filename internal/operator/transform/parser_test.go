@@ -21,7 +21,7 @@ import (
 )
 
 func newTestParser(t *testing.T, regex string, cacheSize uint16) *Parser {
-	cfg := NewConfig(conf.Transform{Name: "test"})
+	cfg := NewConfig("test", conf.Transform{Name: "test"})
 	cfg.Regex = regex
 	if cacheSize > 0 {
 		cfg.Cache.Size = cacheSize
@@ -33,7 +33,7 @@ func newTestParser(t *testing.T, regex string, cacheSize uint16) *Parser {
 }
 
 func TestParserBuildFailure(t *testing.T) {
-	cfg := NewConfig(conf.Transform{Name: "test"})
+	cfg := NewConfig("test", conf.Transform{Name: "test"})
 	cfg.OnError = "invalid_on_error"
 	set := componenttest.NewNopTelemetrySettings()
 	_, err := cfg.Build(set)
@@ -130,7 +130,7 @@ func TestParserRegex(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := NewConfig(conf.Transform{Name: "test"})
+			cfg := NewConfig("test", conf.Transform{Name: "test"})
 			cfg.OutputIDs = []string{"fake"}
 			tc.configure(cfg)
 
@@ -159,7 +159,7 @@ func TestParserRegex(t *testing.T) {
 
 func TestBuildParserRegex(t *testing.T) {
 	newBasicParser := func() *Config {
-		cfg := NewConfig(conf.Transform{Name: "test"})
+		cfg := NewConfig("test", conf.Transform{Name: "test"})
 		cfg.OutputIDs = []string{"test"}
 		cfg.Regex = "(?P<all>.*)"
 		return cfg
@@ -228,7 +228,7 @@ func benchParseInput() (patterns []string) {
 const benchParsePattern = `^(?P<pod_name>[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?P<namespace>[^_]+)_(?P<container_name>.+)-(?P<container_id>[a-z0-9]{64})\.log$`
 
 func newTestBenchParser(b *testing.B, cacheSize uint16) *Parser {
-	cfg := NewConfig(conf.Transform{Name: "test"})
+	cfg := NewConfig("test", conf.Transform{Name: "test"})
 	cfg.Regex = benchParsePattern
 	cfg.Cache.Size = cacheSize
 

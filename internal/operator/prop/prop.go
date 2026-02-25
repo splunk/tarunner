@@ -42,7 +42,7 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 		for _, stanza := range tCfg.Stanza {
 			for _, tDef := range transforms {
 				if tDef.Name == stanza {
-					t := transform.NewConfig(tDef)
+					t := transform.NewConfig(pCfg.Name, tDef)
 					previous.OutputIDs = []string{t.OperatorID}
 					operators = append(operators, operator.NewConfig(t))
 					previous = &t.WriterConfig

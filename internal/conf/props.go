@@ -70,13 +70,20 @@ func ReadProps(payload []byte) ([]Prop, error) {
 		if section.Name() == ini.DefaultSection {
 			continue // disregard default section. We need a stanza per prop.
 		}
-		maxTimestampLookAhead, err := section.Key("MAX_TIMESTAMP_LOOKAHEAD").Int()
-		if err != nil {
-			return nil, err
+		maxTimestampLookAhead := 0
+		if section.Key("MAX_TIMESTAMP_LOOKAHEAD").String() != "" {
+			maxTimestampLookAhead, err = section.Key("MAX_TIMESTAMP_LOOKAHEAD").Int()
+			if err != nil {
+				return nil, err
+			}
 		}
-		noBinaryCheck, err := section.Key("NO_BINARY_CHECK").Bool()
-		if err != nil {
-			return nil, err
+
+		noBinaryCheck := false
+		if section.Key("NO_BINARY_CHECK").String() != "" {
+			noBinaryCheck, err = section.Key("NO_BINARY_CHECK").Bool()
+			if err != nil {
+				return nil, err
+			}
 		}
 		p := Prop{
 			Name:                  section.Name(),
