@@ -21,15 +21,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
 	"go.opentelemetry.io/collector/component"
-
-	"github.com/splunk/tarunner/internal/receiver/monitorreceiver/internal/metadata"
 )
 
 type monitor struct{}
 
 // Type is the receiver type
 func (monitor) Type() component.Type {
-	return metadata.Type
+	return component.MustNewType("monitor")
 }
 
 // CreateDefaultConfig creates a config with type and version
@@ -91,7 +89,12 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		oc.Attributes["com.splunk.sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
 	}
 
+	if sourceParam := rcfg.Input.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
+		oc.Attributes["com.splunk.source"] = helper.ExprStringConfig(sourceParam.Value)
+	}
+
 	oc.IncludeFilePath = true
+	oc.Encoding = "nop"
 
 	return operator.NewConfig(oc)
 }

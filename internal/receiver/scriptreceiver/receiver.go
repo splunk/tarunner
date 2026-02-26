@@ -15,7 +15,6 @@ import (
 
 	"github.com/splunk/tarunner/internal/operator/prop"
 
-	"github.com/splunk/tarunner/internal/receiver/scriptreceiver/internal/metadata"
 	"github.com/splunk/tarunner/internal/scriptedinput"
 )
 
@@ -23,7 +22,7 @@ type scriptReceiver struct{}
 
 // Type is the receiver type
 func (scriptReceiver) Type() component.Type {
-	return metadata.Type
+	return component.MustNewType("script")
 }
 
 // CreateDefaultConfig creates a config with type and version
@@ -60,20 +59,19 @@ func (scriptReceiver) InputConfig(config component.Config) operator.Config {
 	oc.Input = rcfg.Input
 	oc.BaseDir = rcfg.BaseDir
 
-	index := "main"
+	oc.Attributes = map[string]helper.ExprStringConfig{}
 	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
-		index = indexParam.Value
+		oc.Attributes["com.splunk.index"] = helper.ExprStringConfig(indexParam.Value)
 	}
 
-	sourcetype := ""
 	if sourceTypeParam := rcfg.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
-		sourcetype = sourceTypeParam.Value
+		oc.Attributes["com.splunk.sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
 	}
-	oc.Attributes = map[string]helper.ExprStringConfig{
-		"com.splunk.index":      helper.ExprStringConfig(index),
-		"com.splunk.sourcetype": helper.ExprStringConfig(sourcetype),
-		"com.splunk.source":     helper.ExprStringConfig(rcfg.Configuration.Stanza.Name),
+
+	if sourceParam := rcfg.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
+		oc.Attributes["com.splunk.source"] = helper.ExprStringConfig(sourceParam.Value)
 	}
+
 	return operator.NewConfig(oc)
 }
 

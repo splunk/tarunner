@@ -4,9 +4,11 @@
 package prop
 
 import (
-	"github.com/splunk/tarunner/internal/featuregates"
-	"go.opentelemetry.io/collector/featuregate"
 	"testing"
+
+	"go.opentelemetry.io/collector/featuregate"
+
+	"github.com/splunk/tarunner/internal/featuregates"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/recombine"
 

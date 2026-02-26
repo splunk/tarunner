@@ -147,7 +147,7 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 			case <-si.doneChan:
 				return
 			default:
-				b, err := stdoutReader.ReadBytes('\n')
+				b, err := io.ReadAll(stdoutReader)
 				if err != nil {
 					return
 				} else {

@@ -5,11 +5,10 @@ package monitorreceiver
 
 import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
-
-	"github.com/splunk/tarunner/internal/receiver/monitorreceiver/internal/metadata"
 )
 
 func NewFactory() receiver.Factory {
-	return adapter.NewFactory(monitor{}, metadata.LogsStability)
+	return adapter.NewFactory(monitor{}, component.StabilityLevelAlpha)
 }
