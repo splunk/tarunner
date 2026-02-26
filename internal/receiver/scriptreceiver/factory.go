@@ -11,5 +11,5 @@ import (
 )
 
 func NewFactory() receiver.Factory {
-	return adapter.NewFactory(receiverType{}, metadata.LogsStability)
+	return adapter.NewFactory(scriptReceiver{}, metadata.LogsStability)
 }

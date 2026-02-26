@@ -6,6 +6,11 @@ package prop
 import (
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/recombine"
+	"go.opentelemetry.io/collector/featuregate"
+
+	"github.com/splunk/tarunner/internal/operator/transform"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/copy"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 
@@ -15,8 +20,18 @@ import (
 )
 
 func TestCreateProps(t *testing.T) {
+	require.NoError(t, featuregate.GlobalRegistry().Set(CookFeatureGate.ID(), true))
+	defer func() {
+		require.NoError(t, featuregate.GlobalRegistry().Set(CookFeatureGate.ID(), false))
+	}()
 	ops := CreateOperatorConfigs(conf.Prop{
 		Name: "foo",
+		Transforms: []conf.PropsTransforms{
+			{
+				Class:  "calling-foo",
+				Stanza: []string{"foo", "bar"},
+			},
+		},
 		FieldAliases: []conf.FieldAlias{
 			{
 				Name: "foo",
@@ -29,13 +44,41 @@ func TestCreateProps(t *testing.T) {
 				To:   "foobar",
 			},
 		},
+	}, []conf.Transform{
+		{
+			Name:   "foo",
+			Regex:  "foo(.*)",
+			Format: "bar$1",
+		},
+		{
+			Name:   "bar",
+			Regex:  "bar(.*)",
+			Format: "foobar$1",
+		},
+	})
+
+	require.Len(t, ops, 6)
+	require.Equal(t, "foo-start", ops[0].Builder.(*noop.Config).OperatorID)
+	require.Equal(t, `transforms-"foo"-"foo"`, ops[1].Builder.(*transform.Config).OperatorID)
+	require.Equal(t, "foo-copy", ops[3].Builder.(*copy.Config).OperatorID)
+	require.Equal(t, "foobar-copy", ops[4].Builder.(*copy.Config).OperatorID)
+	require.Equal(t, `attributes.foobar`, ops[4].Builder.(*copy.Config).To.String())
+	require.Equal(t, []string{"foo-end"}, ops[4].Builder.(*copy.Config).OutputIDs)
+	require.Equal(t, "foo-end", ops[5].Builder.(*noop.Config).OperatorID)
+}
+
+func TestCreatePropsShouldLineMerge(t *testing.T) {
+	require.NoError(t, featuregate.GlobalRegistry().Set(CookFeatureGate.ID(), true))
+	defer func() {
+		require.NoError(t, featuregate.GlobalRegistry().Set(CookFeatureGate.ID(), false))
+	}()
+	ops := CreateOperatorConfigs(conf.Prop{
+		Name:            "foo",
+		ShouldLineMerge: true,
 	}, nil)
 
-	require.Len(t, ops, 4)
+	require.Len(t, ops, 3)
 	require.Equal(t, "foo-start", ops[0].Builder.(*noop.Config).OperatorID)
-	require.Equal(t, "foo-copy", ops[1].Builder.(*copy.Config).OperatorID)
-	require.Equal(t, "foobar-copy", ops[2].Builder.(*copy.Config).OperatorID)
-	require.Equal(t, `attributes.foobar`, ops[2].Builder.(*copy.Config).To.String())
-	require.Equal(t, []string{"foo-end"}, ops[2].Builder.(*copy.Config).OutputIDs)
-	require.Equal(t, "foo-end", ops[3].Builder.(*noop.Config).OperatorID)
+	require.Equal(t, `foo-recombine`, ops[1].Builder.(*recombine.Config).OperatorID)
+	require.Equal(t, "foo-end", ops[2].Builder.(*noop.Config).OperatorID)
 }

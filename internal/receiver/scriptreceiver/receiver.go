@@ -4,7 +4,10 @@
 package scriptreceiver
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
@@ -16,15 +19,15 @@ import (
 	"github.com/splunk/tarunner/internal/scriptedinput"
 )
 
-type receiverType struct{}
+type scriptReceiver struct{}
 
 // Type is the receiver type
-func (receiverType) Type() component.Type {
+func (scriptReceiver) Type() component.Type {
 	return metadata.Type
 }
 
 // CreateDefaultConfig creates a config with type and version
-func (receiverType) CreateDefaultConfig() component.Config {
+func (scriptReceiver) CreateDefaultConfig() component.Config {
 	return createDefaultConfig()
 }
 
@@ -33,9 +36,11 @@ func createDefaultConfig() *Config {
 }
 
 // BaseConfig gets the base config from config, for now
-func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
+func (scriptReceiver) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(*Config)
 	var operators []operator.Config
+	operators = append(operators, createSetSourceOperator())
+
 	for _, p := range rcfg.Props {
 		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
 		operators = append(operators, ops...)
@@ -49,7 +54,7 @@ func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	}
 }
 
-func (t receiverType) InputConfig(config component.Config) operator.Config {
+func (scriptReceiver) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(*Config)
 	oc := scriptedinput.NewConfig()
 	oc.Input = rcfg.Input
@@ -70,4 +75,11 @@ func (t receiverType) InputConfig(config component.Config) operator.Config {
 		"com.splunk.source":     helper.ExprStringConfig(rcfg.Configuration.Stanza.Name),
 	}
 	return operator.NewConfig(oc)
+}
+
+func createSetSourceOperator() operator.Config {
+	c := move.NewConfigWithID("start")
+	c.From = entry.NewAttributeField("log.file.path")
+	c.To = entry.NewAttributeField("com.splunk.source")
+	return operator.NewConfig(c)
 }
