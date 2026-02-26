@@ -21,6 +21,7 @@ func TestReadProps(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, props, 1)
 	require.Equal(t, "scoreboard", props[0].Name)
+	require.True(t, props[0].ShouldLineMerge)
 }
 
 func TestPropType(t *testing.T) {

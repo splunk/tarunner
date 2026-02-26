@@ -33,6 +33,7 @@ type Prop struct {
 	Transforms            []PropsTransforms
 	MaxTimestampLookAhead int
 	NoBinaryCheck         bool
+	ShouldLineMerge       bool
 }
 
 type FieldAlias struct {
@@ -85,6 +86,13 @@ func ReadProps(payload []byte) ([]Prop, error) {
 				return nil, err
 			}
 		}
+		shouldLineMerge := false
+		if section.Key("SHOULD_LINEMERGE").String() != "" {
+			shouldLineMerge, err = section.Key("SHOULD_LINEMERGE").Bool()
+			if err != nil {
+				return nil, err
+			}
+		}
 		p := Prop{
 			Name:                  section.Name(),
 			TimePrefix:            section.Key("TIME_PREFIX").String(),
@@ -96,6 +104,7 @@ func ReadProps(payload []byte) ([]Prop, error) {
 			SourceType:            section.Key("sourcetype").String(),
 			FieldAliases:          readFieldAliases(section),
 			Transforms:            readPropsTransforms(section),
+			ShouldLineMerge:       shouldLineMerge,
 		}
 
 		result[s] = p
