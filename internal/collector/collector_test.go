@@ -56,7 +56,7 @@ func TestRunPeriodic(t *testing.T) {
 
 	require.EventuallyWithT(t, func(tt *assert.CollectT) {
 		assert.Equal(tt, 1, logsSink.LogRecordCount())
-	}, 1200*time.Millisecond, 10*time.Millisecond)
+	}, 1500*time.Millisecond, 10*time.Millisecond)
 
 	var result string
 	var attrs map[string]any

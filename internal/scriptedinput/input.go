@@ -4,7 +4,6 @@
 package scriptedinput
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -123,31 +122,26 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 	cmd := exec.Command(command)
 	var stdin io.WriteCloser
 	var stdout io.ReadCloser
-	var inputXML []byte
 	if stdin, err = cmd.StdinPipe(); err != nil {
 		return err
 	}
 	if stdout, err = cmd.StdoutPipe(); err != nil {
 		return err
 	}
-	stdoutReader := bufio.NewReader(stdout)
-	if inputXML, err = input.ToXML(); err != nil {
-		return err
-	}
-	if _, err = stdin.Write(inputXML); err != nil {
-		return err
-	}
-	if err = stdin.Close(); err != nil {
-		return err
-	}
 
+	stopRead := make(chan struct{})
 	go func() {
 		for {
 			select {
 			case <-si.doneChan:
 				return
+			case <-stopRead:
+				return
 			default:
-				b, err := io.ReadAll(stdoutReader)
+				b, err := io.ReadAll(stdout)
+				if len(b) == 0 {
+					return
+				}
 				if err != nil {
 					si.logger.Error("Error reading log data", zap.Error(err))
 					return
@@ -166,10 +160,24 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 		}
 	}()
 
+	var inputXML []byte
+	if inputXML, err = input.ToXML(); err != nil {
+		return err
+	}
+	if _, err = stdin.Write(inputXML); err != nil {
+		return err
+	}
+	if err = stdin.Close(); err != nil {
+		return err
+	}
+
 	if err = cmd.Start(); err != nil {
 		return err
 	}
 	si.command = cmd
 
-	return cmd.Wait()
+	err = cmd.Wait()
+	close(stopRead)
+
+	return err
 }
