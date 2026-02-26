@@ -61,7 +61,7 @@ func (scriptReceiver) InputConfig(config component.Config) operator.Config {
 
 	oc.Attributes = map[string]helper.ExprStringConfig{}
 
-	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
+	if hostParam := rcfg.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.
 		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
 	}

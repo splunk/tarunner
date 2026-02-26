@@ -41,9 +41,10 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 	previous = &start.WriterConfig
 
 	if featuregates.CookFeatureGate.IsEnabled() {
-		if !pCfg.ShouldLineMerge {
-			// TODO implement a split parser.
-		}
+		// TODO implement a split parser.
+		//if !pCfg.ShouldLineMerge {
+		//
+		//}
 
 		for _, tCfg := range pCfg.Transforms {
 			for _, stanza := range tCfg.Stanza {
