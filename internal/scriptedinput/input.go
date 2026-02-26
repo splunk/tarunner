@@ -154,7 +154,7 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 				} else {
 					e := entry.New()
 					e.Body = string(b)
-					if err := si.Attributer.Attribute(e); err != nil {
+					if err := si.Attribute(e); err != nil {
 						si.logger.Error("Error setting attributes", zap.Error(err))
 					}
 
