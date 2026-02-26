@@ -5,6 +5,7 @@ package prop
 
 import (
 	"fmt"
+
 	"github.com/splunk/tarunner/internal/featuregates"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
@@ -41,7 +42,7 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 
 	if featuregates.CookFeatureGate.IsEnabled() {
 		if !pCfg.ShouldLineMerge {
-			//TODO implement a split parser.
+			// TODO implement a split parser.
 		}
 
 		for _, tCfg := range pCfg.Transforms {
