@@ -60,16 +60,22 @@ func (scriptReceiver) InputConfig(config component.Config) operator.Config {
 	oc.BaseDir = rcfg.BaseDir
 
 	oc.Attributes = map[string]helper.ExprStringConfig{}
+
+	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
+		// TODO: find a way to run host detection when requested.
+		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
+	}
+
 	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
-		oc.Attributes["com.splunk.index"] = helper.ExprStringConfig(indexParam.Value)
+		oc.Attributes["index"] = helper.ExprStringConfig(indexParam.Value)
 	}
 
 	if sourceTypeParam := rcfg.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
-		oc.Attributes["com.splunk.sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
+		oc.Attributes["sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
 	}
 
 	if sourceParam := rcfg.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
-		oc.Attributes["com.splunk.source"] = helper.ExprStringConfig(sourceParam.Value)
+		oc.Attributes["source"] = helper.ExprStringConfig(sourceParam.Value)
 	}
 
 	return operator.NewConfig(oc)
@@ -78,6 +84,7 @@ func (scriptReceiver) InputConfig(config component.Config) operator.Config {
 func createSetSourceOperator() operator.Config {
 	c := move.NewConfigWithID("start")
 	c.From = entry.NewAttributeField("log.file.path")
-	c.To = entry.NewAttributeField("com.splunk.source")
+	c.To = entry.NewAttributeField("source")
+	c.OnError = "send_quiet"
 	return operator.NewConfig(c)
 }

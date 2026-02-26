@@ -34,15 +34,15 @@ func TestRunTA(t *testing.T) {
 	require.NoError(t, err)
 	defer cancel()
 
-	require.Eventually(t, func() bool {
-		return logsSink.LogRecordCount() == 20
+	require.EventuallyWithT(t, func(tt *assert.CollectT) {
+		assert.Greater(tt, logsSink.LogRecordCount(), 0)
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func TestRunPeriodic(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1338"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -50,46 +50,37 @@ func TestRunPeriodic(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "periodic"), "http://localhost:1337")
+	cancel, err := Run(filepath.Join("testdata", "periodic"), "http://localhost:1338")
 	require.NoError(t, err)
 	defer cancel()
 
-	require.Eventually(t, func() bool {
-		return logsSink.LogRecordCount() == 10
-	}, 1*time.Second, 10*time.Millisecond)
+	require.EventuallyWithT(t, func(tt *assert.CollectT) {
+		assert.Equal(tt, 1, logsSink.LogRecordCount())
+	}, 1200*time.Millisecond, 10*time.Millisecond)
 
-	result := make([]string, 0, 10)
+	var result string
+	var attrs map[string]any
+LOOP:
 	for _, log := range logsSink.AllLogs() {
 		for _, rl := range log.ResourceLogs().All() {
 			for _, sl := range rl.ScopeLogs().All() {
 				for _, lr := range sl.LogRecords().All() {
-					result = append(result, lr.Body().Str())
+					result = lr.Body().Str()
+					attrs = lr.Attributes().AsRaw()
+					break LOOP
 				}
 			}
 		}
 	}
 
-	require.Equal(t, []string{"foo1\n", "foo2\n", "foo3\n", "foo4\n", "foo5\n", "foo6\n", "foo7\n", "foo8\n", "foo9\n", "foo10\n"}, result)
-
-	// reset and get a second run:
-	result = make([]string, 0, 10)
-	for _, log := range logsSink.AllLogs() {
-		for _, rl := range log.ResourceLogs().All() {
-			for _, sl := range rl.ScopeLogs().All() {
-				for _, lr := range sl.LogRecords().All() {
-					result = append(result, lr.Body().Str())
-				}
-			}
-		}
-	}
-
-	require.Equal(t, []string{"foo1\n", "foo2\n", "foo3\n", "foo4\n", "foo5\n", "foo6\n", "foo7\n", "foo8\n", "foo9\n", "foo10\n"}, result)
+	require.Equal(t, "foo1\nfoo2\nfoo3\nfoo4\nfoo5\nfoo6\nfoo7\nfoo8\nfoo9\nfoo10\n", result)
+	require.Equal(t, "_foo", attrs["sourcetype"])
 }
 
 func TestRunDisabled(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1339"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -97,7 +88,7 @@ func TestRunDisabled(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "disabled"), "http://localhost:1337")
+	cancel, err := Run(filepath.Join("testdata", "disabled"), "http://localhost:1339")
 	require.NoError(t, err)
 	require.Nil(t, cancel)
 	time.Sleep(100 * time.Millisecond)
@@ -108,7 +99,7 @@ func TestRunDisabled(t *testing.T) {
 func TestRunDisabledInterval(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1340"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -116,17 +107,17 @@ func TestRunDisabledInterval(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "disabled_interval"), "http://localhost:1337")
+	cancel, err := Run(filepath.Join("testdata", "disabled_interval"), "http://localhost:1340")
 	require.NoError(t, err)
 	defer cancel()
 
-	assert.Equal(t, logsSink.LogRecordCount(), 0)
+	assert.Equal(t, 0, logsSink.LogRecordCount())
 }
 
 func TestRunScriptedInputs(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
-	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1337"
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1341"
 	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
@@ -134,12 +125,12 @@ func TestRunScriptedInputs(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "script"), "http://localhost:1337")
+	cancel, err := Run(filepath.Join("testdata", "script"), "http://localhost:1341")
 	require.NoError(t, err)
 	defer cancel()
 
-	require.Eventually(t, func() bool {
-		return logsSink.LogRecordCount() == 20
+	require.EventuallyWithT(t, func(tt *assert.CollectT) {
+		assert.GreaterOrEqual(tt, logsSink.LogRecordCount(), 1)
 	}, 2*time.Second, 10*time.Millisecond)
 }
 

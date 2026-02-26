@@ -149,10 +149,14 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 			default:
 				b, err := io.ReadAll(stdoutReader)
 				if err != nil {
+					si.logger.Error("Error reading log data", zap.Error(err))
 					return
 				} else {
 					e := entry.New()
 					e.Body = string(b)
+					if err := si.Attributer.Attribute(e); err != nil {
+						si.logger.Error("Error setting attributes", zap.Error(err))
+					}
 
 					if err = si.Write(context.Background(), e); err != nil {
 						si.logger.Error("Error consuming logs", zap.Error(err))

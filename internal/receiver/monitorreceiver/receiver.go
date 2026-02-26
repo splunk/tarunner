@@ -61,7 +61,8 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 func createSetSourceOperator() operator.Config {
 	c := move.NewConfigWithID("start")
 	c.From = entry.NewAttributeField("log.file.path")
-	c.To = entry.NewAttributeField("com.splunk.source")
+	c.To = entry.NewAttributeField("source")
+	c.OnError = "send_quiet"
 	return operator.NewConfig(c)
 }
 
@@ -81,16 +82,21 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
 	}
 	oc.Attributes = map[string]helper.ExprStringConfig{}
+	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
+		// TODO: find a way to run host detection when requested.
+		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
+	}
+
 	if indexParam := rcfg.Input.Configuration.Stanza.Params.Get("index"); indexParam != nil {
-		oc.Attributes["com.splunk.index"] = helper.ExprStringConfig(indexParam.Value)
+		oc.Attributes["index"] = helper.ExprStringConfig(indexParam.Value)
 	}
 
 	if sourceTypeParam := rcfg.Input.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
-		oc.Attributes["com.splunk.sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
+		oc.Attributes["sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
 	}
 
 	if sourceParam := rcfg.Input.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
-		oc.Attributes["com.splunk.source"] = helper.ExprStringConfig(sourceParam.Value)
+		oc.Attributes["source"] = helper.ExprStringConfig(sourceParam.Value)
 	}
 
 	oc.IncludeFilePath = true

@@ -7,7 +7,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.145.0
 	go.opentelemetry.io/collector/component v1.52.0
 	go.opentelemetry.io/collector/component/componenttest v0.146.1
-	go.opentelemetry.io/collector/confmap v1.52.0
 	go.opentelemetry.io/collector/consumer v1.52.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.146.1
 	go.opentelemetry.io/collector/exporter v1.51.0
@@ -76,6 +75,7 @@ require (
 	go.opentelemetry.io/collector/config/configoptional v1.51.0 // indirect
 	go.opentelemetry.io/collector/config/configretry v1.51.0 // indirect
 	go.opentelemetry.io/collector/config/configtls v1.52.0 // indirect
+	go.opentelemetry.io/collector/confmap v1.52.0 // indirect
 	go.opentelemetry.io/collector/confmap/xconfmap v0.146.1 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.146.1 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror/xconsumererror v0.145.0 // indirect

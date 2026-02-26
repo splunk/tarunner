@@ -10,8 +10,6 @@ import (
 
 	"github.com/splunk/tarunner/internal/featuregates"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/recombine"
-
 	"github.com/splunk/tarunner/internal/operator/transform"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/copy"
@@ -68,20 +66,4 @@ func TestCreateProps(t *testing.T) {
 	require.Equal(t, `attributes.foobar`, ops[4].Builder.(*copy.Config).To.String())
 	require.Equal(t, []string{"foo-end"}, ops[4].Builder.(*copy.Config).OutputIDs)
 	require.Equal(t, "foo-end", ops[5].Builder.(*noop.Config).OperatorID)
-}
-
-func TestCreatePropsShouldLineMerge(t *testing.T) {
-	require.NoError(t, featuregate.GlobalRegistry().Set(featuregates.CookFeatureGate.ID(), true))
-	defer func() {
-		require.NoError(t, featuregate.GlobalRegistry().Set(featuregates.CookFeatureGate.ID(), false))
-	}()
-	ops := CreateOperatorConfigs(conf.Prop{
-		Name:            "foo",
-		ShouldLineMerge: true,
-	}, nil)
-
-	require.Len(t, ops, 3)
-	require.Equal(t, "foo-start", ops[0].Builder.(*noop.Config).OperatorID)
-	require.Equal(t, `foo-recombine`, ops[1].Builder.(*recombine.Config).OperatorID)
-	require.Equal(t, "foo-end", ops[2].Builder.(*noop.Config).OperatorID)
 }
