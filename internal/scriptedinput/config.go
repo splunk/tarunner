@@ -29,14 +29,12 @@ func NewConfigWithID(operatorID string) *Config {
 	}
 }
 
-// Config is the configuration of a file input operator
 type Config struct {
 	BaseDir            string
 	conf.Input         `mapstructure:"-"`
 	helper.InputConfig `mapstructure:"-"`
 }
 
-// Build will build a file input operator from the supplied configuration
 func (c Config) Build(set component.TelemetrySettings) (operator.Operator, error) {
 	inputOperator, err := c.InputConfig.Build(set)
 	if err != nil {

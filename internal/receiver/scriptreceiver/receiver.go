@@ -15,7 +15,6 @@ import (
 
 	"github.com/splunk/tarunner/internal/operator/prop"
 
-	"github.com/splunk/tarunner/internal/receiver/scriptreceiver/internal/metadata"
 	"github.com/splunk/tarunner/internal/scriptedinput"
 )
 
@@ -23,7 +22,7 @@ type scriptReceiver struct{}
 
 // Type is the receiver type
 func (scriptReceiver) Type() component.Type {
-	return metadata.Type
+	return component.MustNewType("script")
 }
 
 // CreateDefaultConfig creates a config with type and version
@@ -60,26 +59,32 @@ func (scriptReceiver) InputConfig(config component.Config) operator.Config {
 	oc.Input = rcfg.Input
 	oc.BaseDir = rcfg.BaseDir
 
-	index := "main"
-	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
-		index = indexParam.Value
+	oc.Attributes = map[string]helper.ExprStringConfig{}
+
+	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
+		// TODO: find a way to run host detection when requested.
+		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
 	}
 
-	sourcetype := ""
+	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
+		oc.Attributes["index"] = helper.ExprStringConfig(indexParam.Value)
+	}
+
 	if sourceTypeParam := rcfg.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
-		sourcetype = sourceTypeParam.Value
+		oc.Attributes["sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
 	}
-	oc.Attributes = map[string]helper.ExprStringConfig{
-		"com.splunk.index":      helper.ExprStringConfig(index),
-		"com.splunk.sourcetype": helper.ExprStringConfig(sourcetype),
-		"com.splunk.source":     helper.ExprStringConfig(rcfg.Configuration.Stanza.Name),
+
+	if sourceParam := rcfg.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
+		oc.Attributes["source"] = helper.ExprStringConfig(sourceParam.Value)
 	}
+
 	return operator.NewConfig(oc)
 }
 
 func createSetSourceOperator() operator.Config {
 	c := move.NewConfigWithID("start")
 	c.From = entry.NewAttributeField("log.file.path")
-	c.To = entry.NewAttributeField("com.splunk.source")
+	c.To = entry.NewAttributeField("source")
+	c.OnError = "send_quiet"
 	return operator.NewConfig(c)
 }

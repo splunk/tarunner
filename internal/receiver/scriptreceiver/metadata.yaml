@@ -1,8 +1,0 @@
-type: ta
-
-status:
-  class: receiver
-  stability:
-    development: [logs]
-  distributions: []
-

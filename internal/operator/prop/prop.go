@@ -6,8 +6,7 @@ package prop
 import (
 	"fmt"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/recombine"
-	"go.opentelemetry.io/collector/featuregate"
+	"github.com/splunk/tarunner/internal/featuregates"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -22,25 +21,18 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 )
 
-var CookFeatureGate = featuregate.GlobalRegistry().MustRegister(
-	"cook",
-	featuregate.StageAlpha,
-	featuregate.WithRegisterDescription("When enabled, cook the data by applying props.conf"),
-	featuregate.WithRegisterFromVersion("v0.1.0"),
-)
-
 func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operator.Config {
 	var operators []operator.Config
 	start := noop.NewConfigWithID(fmt.Sprintf("%s-start", pCfg.Name))
 	switch pCfg.Type() {
 	case conf.SourceType:
-		start.IfExpr = fmt.Sprintf("attributes['com.splunk.sourcetype'] == %q", pCfg.Name)
+		start.IfExpr = fmt.Sprintf("attributes['sourcetype'] == %q", pCfg.Name)
 	case conf.Default:
 		// no condition
 	case conf.Source:
-		start.IfExpr = fmt.Sprintf("attributes['com.splunk.source'] == %q", pCfg.Name)
+		start.IfExpr = fmt.Sprintf("attributes['source'] == %q", pCfg.Name)
 	case conf.Host:
-		start.IfExpr = fmt.Sprintf("attributes['host.name'] == %q", pCfg.Name)
+		start.IfExpr = fmt.Sprintf("attributes['host'] == %q", pCfg.Name)
 	default:
 		panic(fmt.Sprintf("unknown prop type: %v", pCfg.Type()))
 	}
@@ -48,14 +40,11 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 	var previous *helper.WriterConfig
 	previous = &start.WriterConfig
 
-	if pCfg.ShouldLineMerge {
-		rec := recombine.NewConfigWithID(fmt.Sprintf("%s-recombine", pCfg.Name))
-		previous.OutputIDs = []string{rec.OperatorID}
-		operators = append(operators, operator.NewConfig(rec))
-		previous = &rec.WriterConfig
-	}
+	if featuregates.CookFeatureGate.IsEnabled() {
+		if !pCfg.ShouldLineMerge {
+			// TODO implement a split parser.
+		}
 
-	if CookFeatureGate.IsEnabled() {
 		for _, tCfg := range pCfg.Transforms {
 			for _, stanza := range tCfg.Stanza {
 				for _, tDef := range transforms {
@@ -87,6 +76,8 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 			operators = append(operators, operator.NewConfig(sourceTypeOp))
 			previous = &sourceTypeOp.WriterConfig
 		}
+
+		// TODO add code to move source, sourcetype, host to cooked fields.
 	}
 
 	endNoop := noop.NewConfigWithID(fmt.Sprintf("%s-end", pCfg.Name))

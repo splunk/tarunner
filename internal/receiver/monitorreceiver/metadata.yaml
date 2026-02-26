@@ -1,8 +1,0 @@
-type: monitor
-
-status:
-  class: receiver
-  stability:
-    development: [logs]
-  distributions: []
-

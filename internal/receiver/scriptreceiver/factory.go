@@ -5,11 +5,10 @@ package scriptreceiver
 
 import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
-
-	"github.com/splunk/tarunner/internal/receiver/scriptreceiver/internal/metadata"
 )
 
 func NewFactory() receiver.Factory {
-	return adapter.NewFactory(scriptReceiver{}, metadata.LogsStability)
+	return adapter.NewFactory(scriptReceiver{}, component.StabilityLevelAlpha)
 }
