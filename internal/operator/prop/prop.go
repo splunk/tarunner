@@ -6,8 +6,9 @@ package prop
 import (
 	"fmt"
 
+	"github.com/splunk/tarunner/internal/featuregates"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/recombine"
-	"go.opentelemetry.io/collector/featuregate"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -20,13 +21,6 @@ import (
 	"github.com/splunk/tarunner/internal/conf"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
-)
-
-var CookFeatureGate = featuregate.GlobalRegistry().MustRegister(
-	"cook",
-	featuregate.StageAlpha,
-	featuregate.WithRegisterDescription("When enabled, cook the data by applying props.conf"),
-	featuregate.WithRegisterFromVersion("v0.1.0"),
 )
 
 func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operator.Config {
@@ -55,7 +49,7 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 		previous = &rec.WriterConfig
 	}
 
-	if CookFeatureGate.IsEnabled() {
+	if featuregates.CookFeatureGate.IsEnabled() {
 		for _, tCfg := range pCfg.Transforms {
 			for _, stanza := range tCfg.Stanza {
 				for _, tDef := range transforms {
