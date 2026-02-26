@@ -1,24 +1,19 @@
 // Copyright Splunk, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-package monitorreceiver
+package scriptreceiver
 
 import (
-	"path/filepath"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
-
-	"github.com/splunk/tarunner/internal/operator/prop"
-
-	"github.com/splunk/tarunner/internal/script"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"go.opentelemetry.io/collector/component"
 
-	"github.com/splunk/tarunner/internal/monitorreceiver/internal/metadata"
+	"github.com/splunk/tarunner/internal/operator/prop"
+
+	"github.com/splunk/tarunner/internal/receiver/scriptreceiver/internal/metadata"
+	"github.com/splunk/tarunner/internal/scriptedinput"
 )
 
 type receiverType struct{}
@@ -37,11 +32,10 @@ func createDefaultConfig() *Config {
 	return &Config{}
 }
 
-// BaseConfig gets the base config from config
+// BaseConfig gets the base config from config, for now
 func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(*Config)
 	var operators []operator.Config
-
 	for _, p := range rcfg.Props {
 		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
 		operators = append(operators, ops...)
@@ -57,33 +51,23 @@ func (receiverType) BaseConfig(cfg component.Config) adapter.BaseConfig {
 
 func (t receiverType) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(*Config)
-	oc := file.NewConfig()
-	path, err := script.DetermineCommandName(rcfg.BaseDir, rcfg.Input)
-	if err != nil {
-		return operator.NewConfig(oc)
-	}
-	allowlist := path
-	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil {
-		allowlist = filepath.Join(path, w.Value)
-	}
-	oc.Include = []string{allowlist}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil {
-		oc.Exclude = []string{filepath.Join(path, b.Value)}
-	}
+	oc := scriptedinput.NewConfig()
+	oc.Input = rcfg.Input
+	oc.BaseDir = rcfg.BaseDir
+
 	index := "main"
-	if indexParam := rcfg.Input.Configuration.Stanza.Params.Get("index"); indexParam != nil {
+	if indexParam := rcfg.Configuration.Stanza.Params.Get("index"); indexParam != nil {
 		index = indexParam.Value
 	}
 
 	sourcetype := ""
-	if sourceTypeParam := rcfg.Input.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
+	if sourceTypeParam := rcfg.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
 		sourcetype = sourceTypeParam.Value
 	}
 	oc.Attributes = map[string]helper.ExprStringConfig{
 		"com.splunk.index":      helper.ExprStringConfig(index),
 		"com.splunk.sourcetype": helper.ExprStringConfig(sourcetype),
-		"com.splunk.source":     helper.ExprStringConfig(rcfg.Input.Configuration.Stanza.Name),
+		"com.splunk.source":     helper.ExprStringConfig(rcfg.Configuration.Stanza.Name),
 	}
-	oc.IncludeFilePath = true
 	return operator.NewConfig(oc)
 }
