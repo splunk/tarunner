@@ -21,8 +21,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/internal/conf"
-	"github.com/splunk/tarunner/internal/monitorreceiver"
-	"github.com/splunk/tarunner/internal/scriptreceiver"
+	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
+	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
 )
 
 // Run runs the collector with a baseDir working directory and an OTLP endpoint.
