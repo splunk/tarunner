@@ -19,6 +19,8 @@ func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
 		return "", err
 	}
 	switch parsed.Scheme {
+	case "monitor":
+		return parsed.Path, nil
 	case "script":
 		return GetPath(baseDir, filepath.Join(parsed.Host, parsed.Path))
 	case "":
