@@ -1,0 +1,34 @@
+services:
+  splunk:
+    image: splunk/splunk:9.3
+    profiles:
+      - splunk
+    container_name: splunk
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-0000000000000
+      - SPLUNK_PASSWORD=changeme
+    ports:
+      - 18000:8000
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:8000' ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  otelcollector:
+    image: otel/opentelemetry-collector:latest
+    container_name: otelcollector
+    volumes:
+      - ./otel-config.yaml:/etc/otelcol/config.yaml
+  tarunner:
+    build:
+      context: ..
+      dockerfile: debian.Dockerfile
+    container_name: tarunner
+    profiles:
+      - tarunner
+    command:
+      - /var/ta
+      - http://otelcollector:4318
+    volumes:
+      - ./Splunk_TA_nix:/var/ta
