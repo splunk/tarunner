@@ -16,7 +16,6 @@
 - `props`: Create a feature gate to configure the behavior of TA runner (#7)
   This behavior is experimental and disabled by default.
   Run with `--feature-gates +cook` to run all props and cook the data so indexer can accept the data as ready for ingestion.
-  
 - `props`: add support for field aliases, transforms, and loading props as part of the config. (#4)
 - `script, monitor`: add metadata mapping to attributes (#22)
   Map source to com.splunk.source
