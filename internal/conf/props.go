@@ -152,6 +152,10 @@ func readFieldAliases(section *ini.Section) []FieldAlias {
 // and return from and to fields
 func parseFieldAliasExpr(expr string) (string, string) {
 	captures := fieldAliasRegex.FindStringSubmatch(expr)
+	// TODO handle mismatches
+	if len(captures) != 3 {
+		return "", ""
+	}
 	return captures[1], captures[2]
 }
 
