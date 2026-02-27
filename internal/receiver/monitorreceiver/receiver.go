@@ -41,7 +41,7 @@ func createDefaultConfig() *Config {
 
 // BaseConfig gets the base config from config
 func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
-	rcfg := cfg.(*Config)
+	rcfg := cfg.(Config)
 	var operators []operator.Config
 	operators = append(operators, createSetSourceOperator())
 
@@ -67,7 +67,7 @@ func createSetSourceOperator() operator.Config {
 }
 
 func (t monitor) InputConfig(config component.Config) operator.Config {
-	rcfg := config.(*Config)
+	rcfg := config.(Config)
 	oc := file.NewConfig()
 	path, err := script.DetermineCommandName(rcfg.BaseDir, rcfg.Input)
 	if err != nil {
