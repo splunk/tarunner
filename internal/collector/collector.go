@@ -94,7 +94,7 @@ func createReceivers(inputs []conf.Input, transforms []conf.Transform, props []c
 		}
 		l, err := createReceiver(baseDir, next, input, transforms, props, logger, meterProvider, tracerProvider)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
 		}
 		receivers = append(receivers, l)
 	}
