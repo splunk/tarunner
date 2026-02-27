@@ -110,7 +110,7 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 
 func (si *ScriptedInput) execute(baseDir string, input conf.Input) {
 	if err := si._execute(baseDir, input); err != nil {
-		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.Error(err))
+		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.String("error", err.Error()))
 	}
 }
 
@@ -138,23 +138,21 @@ func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
 			case <-stopRead:
 				return
 			default:
-				b, err := io.ReadAll(stdout)
+				b, ioErr := io.ReadAll(stdout)
 				if len(b) == 0 {
 					return
 				}
-				if err != nil {
-					si.logger.Error("Error reading log data", zap.Error(err))
-					return
-				} else {
-					e := entry.New()
-					e.Body = string(b)
-					if err := si.Attribute(e); err != nil {
-						si.logger.Error("Error setting attributes", zap.Error(err))
-					}
+				e := entry.New()
+				e.Body = string(b)
+				if err := si.Attribute(e); err != nil {
+					si.logger.Error("Error setting attributes", zap.Error(err))
+				}
 
-					if err = si.Write(context.Background(), e); err != nil {
-						si.logger.Error("Error consuming logs", zap.Error(err))
-					}
+				if err = si.Write(context.Background(), e); err != nil {
+					si.logger.Error("Error consuming logs", zap.Error(err))
+				}
+				if ioErr != nil {
+					return
 				}
 			}
 		}
