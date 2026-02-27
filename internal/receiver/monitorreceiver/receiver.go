@@ -51,7 +51,11 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	}
 
 	endNoop := noop.NewConfigWithID("end")
+
+	metadata := renameMetadata()
+	endNoop.OutputIDs = []string{metadata[0].ID()}
 	operators = append(operators, operator.NewConfig(endNoop))
+	operators = append(operators, metadata...)
 
 	return adapter.BaseConfig{
 		Operators: operators,
@@ -103,4 +107,36 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	oc.Encoding = "nop"
 
 	return operator.NewConfig(oc)
+}
+
+func renameMetadata() []operator.Config {
+	source := move.NewConfigWithID("end-source")
+	source.From = entry.NewAttributeField("source")
+	source.To = entry.NewAttributeField("com.splunk.source")
+	source.OnError = "send_quiet"
+	source.OutputIDs = []string{"end-sourcetype"}
+
+	sourceType := move.NewConfigWithID("end-sourcetype")
+	sourceType.From = entry.NewAttributeField("sourcetype")
+	sourceType.To = entry.NewAttributeField("com.splunk.sourcetype")
+	sourceType.OnError = "send_quiet"
+	sourceType.OutputIDs = []string{"end-host"}
+
+	host := move.NewConfigWithID("end-host")
+	host.From = entry.NewAttributeField("host")
+	host.To = entry.NewAttributeField("com.splunk.host")
+	host.OnError = "send_quiet"
+	sourceType.OutputIDs = []string{"end-index"}
+
+	index := move.NewConfigWithID("end-index")
+	index.From = entry.NewAttributeField("index")
+	index.To = entry.NewAttributeField("com.splunk.index")
+	index.OnError = "send_quiet"
+
+	return []operator.Config{
+		operator.NewConfig(source),
+		operator.NewConfig(sourceType),
+		operator.NewConfig(host),
+		operator.NewConfig(index),
+	}
 }
