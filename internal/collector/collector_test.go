@@ -74,7 +74,7 @@ LOOP:
 	}
 
 	require.Equal(t, "foo1\nfoo2\nfoo3\nfoo4\nfoo5\nfoo6\nfoo7\nfoo8\nfoo9\nfoo10\n", result)
-	require.Equal(t, "_foo", attrs["sourcetype"])
+	require.Equal(t, "_foo", attrs["com.splunk.sourcetype"])
 }
 
 func TestRunDisabled(t *testing.T) {
