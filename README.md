@@ -2,7 +2,7 @@
 
 Run technical addons with this simple utility program.
 
-The TA runner can interpret `inputs.conf`, `transforms.conf` and `props.conf` files and runs technical addons according to these settings.
+The TA runner runs one or multiple technical addons, reading `inputs.conf`, `transforms.conf` and `props.conf` files.
 
 This project is under active development. You can consult the [roadmap](https://github.com/splunk/tarunner/issues) to learn more. 
 
@@ -15,7 +15,7 @@ This program exports all data over the OpenTelemetry Protocol (OTLP). It can be 
   
   `> tarunner <basedir> <otlp-endpoint>`
   
-  `basedir`: the location of the technical addon, uncompressed.
+  `basedir`: the location of the technical addons, uncompressed. Typically $SPLUNK_HOME/etc/apps
   
   `otlp-endpoint`: the OTLP gRPC endpoint to target with the runner. Example: `http://localhost:4317`
 
@@ -25,7 +25,7 @@ Build the Docker image:
 * `> docker build -t tarunner .`
 
 Run the image:
-* `> docker run --rm -v $(pwd)/ta:/ta /ta http://endpoint:4317`
+* `> docker run --rm -v $(pwd)/apps:/apps /apps http://endpoint:4317`
 
 See also under the `integration` folder a `docker-compose.yml` example.
 
