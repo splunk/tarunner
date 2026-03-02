@@ -40,22 +40,18 @@ func Run(baseDir, endpoint string) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := readInputs(baseDir)
+	apps, err := readApps(baseDir)
 	if err != nil {
 		return nil, err
 	}
-	transforms, err := readTransforms(baseDir)
-	if err != nil {
-		return nil, err
-	}
-	props, err := readProps(baseDir)
-	if err != nil {
-		return nil, err
-	}
+	var receivers []receiver.Logs
+	for _, app := range apps {
+		newReceivers, err := createReceivers(app.Name, app.Inputs, app.Transforms, app.Props, app.Dir, e, logger, meterProvider, tracerProvider)
+		if err != nil {
+			return nil, err
+		}
+		receivers = append(receivers, newReceivers...)
 
-	receivers, err := createReceivers(inputs, transforms, props, baseDir, e, logger, meterProvider, tracerProvider)
-	if err != nil {
-		return nil, err
 	}
 
 	if len(receivers) == 0 {
@@ -85,20 +81,52 @@ func Run(baseDir, endpoint string) (func(), error) {
 	return shutDownFunc, nil
 }
 
-func createReceivers(inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) ([]receiver.Logs, error) {
+func createReceivers(name string, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
 		disabled := input.Configuration.Stanza.Params.Get("disabled")
 		if disabled != nil && disabled.Value == "1" {
 			continue
 		}
-		l, err := createReceiver(baseDir, next, input, transforms, props, logger, meterProvider, tracerProvider)
+		l, err := createReceiver(name, baseDir, next, input, transforms, props, logger, meterProvider, tracerProvider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
 		}
 		receivers = append(receivers, l)
 	}
 	return receivers, nil
+}
+
+func readApps(baseDir string) ([]conf.App, error) {
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil, err
+	}
+	apps := make([]conf.App, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			inputs, err := readInputs(filepath.Join(baseDir, entry.Name()))
+			if err != nil {
+				return nil, err
+			}
+			transforms, err := readTransforms(filepath.Join(baseDir, entry.Name()))
+			if err != nil {
+				return nil, err
+			}
+			props, err := readProps(filepath.Join(baseDir, entry.Name()))
+			if err != nil {
+				return nil, err
+			}
+			apps = append(apps, conf.App{
+				Name:       entry.Name(),
+				Dir:        filepath.Join(baseDir, entry.Name()),
+				Inputs:     inputs,
+				Transforms: transforms,
+				Props:      props,
+			})
+		}
+	}
+	return apps, nil
 }
 
 func readInputs(baseDir string) ([]conf.Input, error) {
@@ -146,7 +174,7 @@ func readProps(baseDir string) ([]conf.Prop, error) {
 	return conf.ReadProps(b)
 }
 
-func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
+func createReceiver(name, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
 	parsed, err := url.Parse(input.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
@@ -155,7 +183,7 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 	case "script", "":
 		f := scriptreceiver.NewFactory()
 		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
+			ID: component.MustNewIDWithName(f.Type().String(), filepath.Join(name, parsed.Path)),
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         logger,
 				MeterProvider:  meterProvider,
@@ -172,7 +200,7 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 	case "monitor":
 		f := monitorreceiver.NewFactory()
 		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
+			ID: component.MustNewIDWithName(f.Type().String(), filepath.Join(name, parsed.Path)),
 			TelemetrySettings: component.TelemetrySettings{
 				Logger:         logger,
 				MeterProvider:  meterProvider,
