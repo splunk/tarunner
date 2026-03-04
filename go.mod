@@ -7,12 +7,12 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.145.0
 	go.opentelemetry.io/collector/component v1.52.0
 	go.opentelemetry.io/collector/component/componenttest v0.146.1
-	go.opentelemetry.io/collector/consumer v1.52.0
-	go.opentelemetry.io/collector/consumer/consumertest v0.146.1
+	go.opentelemetry.io/collector/consumer v1.53.0
+	go.opentelemetry.io/collector/consumer/consumertest v0.147.0
 	go.opentelemetry.io/collector/exporter v1.51.0
 	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.145.0
-	go.opentelemetry.io/collector/featuregate v1.52.0
-	go.opentelemetry.io/collector/pdata v1.52.0
+	go.opentelemetry.io/collector/featuregate v1.53.0
+	go.opentelemetry.io/collector/pdata v1.53.0
 	go.opentelemetry.io/collector/receiver v1.52.0
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.145.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.146.1
@@ -79,7 +79,7 @@ require (
 	go.opentelemetry.io/collector/confmap/xconfmap v0.146.1 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.146.1 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror/xconsumererror v0.145.0 // indirect
-	go.opentelemetry.io/collector/consumer/xconsumer v0.146.1 // indirect
+	go.opentelemetry.io/collector/consumer/xconsumer v0.147.0 // indirect
 	go.opentelemetry.io/collector/exporter/exporterhelper v0.145.0 // indirect
 	go.opentelemetry.io/collector/exporter/exporterhelper/xexporterhelper v0.145.0 // indirect
 	go.opentelemetry.io/collector/exporter/xexporter v0.145.0 // indirect
@@ -90,7 +90,7 @@ require (
 	go.opentelemetry.io/collector/internal/componentalias v0.146.1 // indirect
 	go.opentelemetry.io/collector/internal/sharedcomponent v0.145.0 // indirect
 	go.opentelemetry.io/collector/internal/telemetry v0.145.0 // indirect
-	go.opentelemetry.io/collector/pdata/pprofile v0.146.1 // indirect
+	go.opentelemetry.io/collector/pdata/pprofile v0.147.0 // indirect
 	go.opentelemetry.io/collector/pdata/xpdata v0.145.0 // indirect
 	go.opentelemetry.io/collector/pipeline v1.52.0 // indirect
 	go.opentelemetry.io/collector/pipeline/xpipeline v0.146.1 // indirect
@@ -103,7 +103,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
