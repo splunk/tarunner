@@ -5,14 +5,14 @@ go 1.25.7
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.146.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.145.0
-	go.opentelemetry.io/collector/component v1.52.0
+	go.opentelemetry.io/collector/component v1.53.0
 	go.opentelemetry.io/collector/component/componenttest v0.146.1
 	go.opentelemetry.io/collector/consumer v1.52.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.146.1
 	go.opentelemetry.io/collector/exporter v1.51.0
 	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.145.0
-	go.opentelemetry.io/collector/featuregate v1.52.0
-	go.opentelemetry.io/collector/pdata v1.52.0
+	go.opentelemetry.io/collector/featuregate v1.53.0
+	go.opentelemetry.io/collector/pdata v1.53.0
 	go.opentelemetry.io/collector/receiver v1.52.0
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.145.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.146.1
@@ -103,7 +103,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
