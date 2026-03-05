@@ -4,6 +4,10 @@
 
 <!-- next version -->
 
+## v0.2.1
+
+Testing release workflow.
+
 ## v0.2.0
 
 ### 💡 Enhancements 💡
