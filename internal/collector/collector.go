@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -186,7 +187,24 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 		},
 			next)
 		return l, err
+	case "WinEventLog":
+		f := wineventlogreceiver.NewFactory()
+		l, err := f.CreateLogs(context.Background(), receiver.Settings{
+			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
+			TelemetrySettings: component.TelemetrySettings{
+				Logger:         logger,
+				MeterProvider:  meterProvider,
+				TracerProvider: tracerProvider,
+			},
+		}, wineventlogreceiver.Config{
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
+		},
+			next)
+		return l, err
 	default:
-		return nil, fmt.Errorf("unknown scheme %q", parsed.Scheme)
+		return nil, fmt.Errorf("unsupported scheme %q", parsed.Scheme)
 	}
 }
