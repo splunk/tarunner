@@ -39,4 +39,9 @@ chlog-update:
 	$(eval ARCH:=$(word 2,$(subst _, ,$@)))
 	mkdir -p bin && cd cmd/tarunner && GOOS=$(OS) GOARCH=$(ARCH) $(GOCMD) build -o ../../bin/tarunner_$(OS)_$(ARCH)$(if $(filter-out windows,$(OS)),,.exe) .
 
+.PHONY: package
 package: windows_amd64_build windows_arm64_build linux_amd64_build linux_arm64_build darwin_amd64_build darwin_arm64_build linux_ppc64le_build aix_ppc64_build
+
+.PHONY: docker
+docker:
+	docker build --platform linux/amd64 -t ghcr.io/splunk/tarunner:main .

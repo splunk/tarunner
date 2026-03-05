@@ -20,6 +20,13 @@ Build:
 To build for a different platform and architecture, use:
 `> GOOS=windows GOARCH=arm64 make build`
 
+To build for all supported architectures, run:
+`> make package`
+
+To build the Docker image associated with this project, run:
+
+`> make docker`
+
 ### Making a pull request
 
 This repository uses [`chloggen`](https://github.com/open-telemetry/opentelemetry-go-build-tools/tree/main/chloggen).
