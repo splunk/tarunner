@@ -100,7 +100,7 @@ jobs:
 
   publish-stable:
     runs-on: ubuntu-24.04
-    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'open-telemetry/opentelemetry-injector'
+    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'splunk/tarunner'
     needs: test
     permissions:
       contents: write
