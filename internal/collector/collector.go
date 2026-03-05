@@ -7,10 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 	"net/url"
 	"os"
 	"path/filepath"
+
+	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"

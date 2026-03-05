@@ -1,27 +1,21 @@
 // Copyright Splunk, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build windows
+
 package wineventlogreceiver
 
 import (
-	"path/filepath"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
-
-	"github.com/splunk/tarunner/internal/operator/prop"
-
-	"github.com/splunk/tarunner/internal/script"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/windows"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"go.opentelemetry.io/collector/component"
+
+	"github.com/splunk/tarunner/internal/operator/prop"
 )
 
 type welreceiver struct{}
