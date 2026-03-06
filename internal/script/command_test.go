@@ -24,7 +24,7 @@ func TestDetermineCommandName(t *testing.T) {
 		{
 			"script",
 			"script://./bin/foo.sh",
-			"bin/foo.sh",
+			filepath.Join("bin", "foo.sh"),
 			"",
 		},
 		{
@@ -33,7 +33,7 @@ func TestDetermineCommandName(t *testing.T) {
 			"",
 			func() string {
 				abs, _ := filepath.Abs("..")
-				return fmt.Sprintf(`path "%s/foo.sh" is outside the base directory`, abs)
+				return fmt.Sprintf(`path "%s%cfoo.sh" is outside the base directory`, abs, filepath.Separator)
 			}(),
 		},
 		{
