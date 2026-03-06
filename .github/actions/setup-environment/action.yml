@@ -12,5 +12,5 @@ runs:
 
     - name: Installing required tools
       run: |
-        cd ${{github.workspace}} && make install-tools
+        make install-tools
       shell: bash

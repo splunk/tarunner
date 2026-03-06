@@ -4,6 +4,7 @@
 package scriptedinput
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -18,6 +19,10 @@ import (
 )
 
 func Test_ScriptedInput(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows because scripts use bash")
+	}
+
 	tests := []struct {
 		name      string
 		interval  string
