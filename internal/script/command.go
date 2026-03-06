@@ -51,7 +51,7 @@ func GetPath(baseDir, path string) (string, error) {
 		return "", err
 	}
 	if relPath == "." || strings.HasPrefix(relPath, "..") {
-		return "", fmt.Errorf("path %q is outside the base directory", filepath.Clean(resolvedPath))
+		return "", fmt.Errorf("path '%s' is outside the base directory", filepath.Clean(resolvedPath))
 	}
 
 	return resolvedPath, nil

@@ -33,7 +33,7 @@ func TestDetermineCommandName(t *testing.T) {
 			"",
 			func() string {
 				abs, _ := filepath.Abs("..")
-				return fmt.Sprintf(`path "%s%cfoo.sh" is outside the base directory`, filepath.Clean(abs), filepath.Separator)
+				return fmt.Sprintf("path '%s%cfoo.sh' is outside the base directory", filepath.Clean(abs), filepath.Separator)
 			}(),
 		},
 		{
