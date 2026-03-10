@@ -1,5 +1,5 @@
 # This Dockerfile is used by the integration example and installs additional software to try out the Splunk_TA_nix addon.
-from golang:1.26.0 as builder
+from golang:1.26.1 as builder
 
 COPY . .
 
