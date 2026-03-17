@@ -27,11 +27,17 @@
         "bump",
         "replacement"
       ],
-      "enabled": false
+      "enabled": false,
+      "postUpdateOptions": [
+        "gomodTidy"
+      ]
     },
     {
       "matchManagers": [
         "gomod"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
       ],
       "matchUpdateTypes": [
         "major"
@@ -74,6 +80,9 @@
       "matchManagers": [
         "gomod"
       ],
+      "postUpdateOptions": [
+        "gomodTidy"
+      ],
       "groupName": "All golang.org/x packages",
       "matchPackageNames": [
         "golang.org/x{/,}**"
@@ -82,6 +91,9 @@
     {
       "matchManagers": [
         "gomod"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
       ],
       "groupName": "All go.opentelemetry.io/build-tools packages",
       "matchPackageNames": [
@@ -92,6 +104,9 @@
       "matchManagers": [
         "gomod"
       ],
+      "postUpdateOptions": [
+        "gomodTidy"
+      ],
       "groupName": "All go.opentelemetry.io/otel packages",
       "matchSourceUrls": [
         "https://go.opentelemetry.io/otel{/,}**"
@@ -100,6 +115,9 @@
     {
       "matchManagers": [
         "gomod"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
       ],
       "matchSourceUrls": [
         "https://github.com/open-telemetry/opentelemetry-collector"
@@ -112,6 +130,9 @@
     {
       "matchManagers": [
         "gomod"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
       ],
       "matchSourceUrls": [
         "https://github.com/open-telemetry/opentelemetry-collector"
@@ -127,6 +148,9 @@
       "matchManagers": [
         "gomod"
       ],
+      "postUpdateOptions": [
+        "gomodTidy"
+      ],
       "matchSourceUrls": [
         "https://github.com/open-telemetry/opentelemetry-collector-contrib"
       ],
@@ -140,6 +164,9 @@
     {
       "matchManagers": [
         "gomod"
+      ],
+      "postUpdateOptions": [
+        "gomodTidy"
       ],
       "matchSourceUrls": [
         "https://github.com/open-telemetry/opentelemetry-go-contrib"
