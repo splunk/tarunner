@@ -4,6 +4,8 @@
 package tcpreceiver
 
 import (
+	"net/url"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/tcp"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
 
@@ -39,7 +41,6 @@ func createDefaultConfig() *Config {
 func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(Config)
 	var operators []operator.Config
-	operators = append(operators, createSetSourceOperator())
 
 	for _, p := range rcfg.Props {
 		ops := prop.CreateOperatorConfigs(p, rcfg.Transforms)
@@ -58,17 +59,11 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	}
 }
 
-func createSetSourceOperator() operator.Config {
-	c := move.NewConfigWithID("start")
-	c.From = entry.NewAttributeField("log.file.path")
-	c.To = entry.NewAttributeField("source")
-	c.OnError = "send_quiet"
-	return operator.NewConfig(c)
-}
-
 func (t monitor) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(Config)
 	oc := tcp.NewConfig()
+	listenAddress, _ := url.Parse(rcfg.Input.Configuration.Stanza.Name)
+	oc.ListenAddress = listenAddress.Host
 	oc.Attributes = map[string]helper.ExprStringConfig{}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.

@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
+
 	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 
 	"go.opentelemetry.io/collector/component"
@@ -198,6 +200,23 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, wineventlogreceiver.Config{
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
+		},
+			next)
+		return l, err
+	case "tcp":
+		f := tcpreceiver.NewFactory()
+		l, err := f.CreateLogs(context.Background(), receiver.Settings{
+			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
+			TelemetrySettings: component.TelemetrySettings{
+				Logger:         logger,
+				MeterProvider:  meterProvider,
+				TracerProvider: tracerProvider,
+			},
+		}, tcpreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
