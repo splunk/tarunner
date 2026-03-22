@@ -205,3 +205,32 @@ func TestUseTCP(t *testing.T) {
 		assert.Equal(tt, "test", lr.Body().Str())
 	}, 2*time.Second, 10*time.Millisecond)
 }
+
+func TestUseUDP(t *testing.T) {
+	rootDir := filepath.Join("testdata", "udp")
+	logsSink := &consumertest.LogsSink{}
+	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
+	cfg.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1343"
+	rcvr, err := otlpreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(otlpreceiver.NewFactory().Type()), cfg, logsSink)
+	require.NoError(t, err)
+	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer func() {
+		_ = rcvr.Shutdown(context.Background())
+	}()
+	cancel, err := Run(rootDir, "http://localhost:1343")
+	require.NoError(t, err)
+	defer cancel()
+	conn, err := net.Dial("udp", "127.0.0.1:4000")
+	require.NoError(t, err)
+	_, err = conn.Write([]byte("test"))
+	require.NoError(t, err)
+	err = conn.Close()
+	require.NoError(t, err)
+
+	require.EventuallyWithT(t, func(tt *assert.CollectT) {
+		require.GreaterOrEqual(tt, logsSink.LogRecordCount(), 1)
+		lr := logsSink.AllLogs()[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0)
+		assert.Equal(tt, "test", lr.Body().Str())
+	}, 2*time.Second, 10*time.Millisecond)
+}
