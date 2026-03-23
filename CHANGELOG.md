@@ -4,6 +4,16 @@
 
 <!-- next version -->
 
+## 0.3.0
+
+### 💡 Enhancements 💡
+
+- `WinEventLog`: Add support for WinEventLog input scheme (#51)
+  This code is experimental and doesn't support advanced options of the WinEventLog input.
+  
+- `tcp`: Add support for the tcp stanza (#64)
+- `udp`: add support for udp inputs (#65)
+
 ## v0.2.1
 
 Testing release workflow.
