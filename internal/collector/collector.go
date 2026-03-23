@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
+
 	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
 
 	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
@@ -217,6 +219,23 @@ func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transf
 				TracerProvider: tracerProvider,
 			},
 		}, tcpreceiver.Config{
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
+		},
+			next)
+		return l, err
+	case "udp":
+		f := udpreceiver.NewFactory()
+		l, err := f.CreateLogs(context.Background(), receiver.Settings{
+			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
+			TelemetrySettings: component.TelemetrySettings{
+				Logger:         logger,
+				MeterProvider:  meterProvider,
+				TracerProvider: tracerProvider,
+			},
+		}, udpreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
