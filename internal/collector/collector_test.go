@@ -194,8 +194,10 @@ func TestUseTCP(t *testing.T) {
 
 	conn, err := net.Dial("tcp", "localhost:4000")
 	require.NoError(t, err)
-	conn.Write([]byte("test"))
-	conn.Close()
+	_, err = conn.Write([]byte("test"))
+	require.NoError(t, err)
+	err = conn.Close()
+	require.NoError(t, err)
 
 	require.EventuallyWithT(t, func(tt *assert.CollectT) {
 		require.GreaterOrEqual(tt, logsSink.LogRecordCount(), 1)
