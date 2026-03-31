@@ -5,7 +5,7 @@ COPY . .
 
 RUN cd cmd/tarunner && GOOS=linux GOARCH=amd64 go build . && cp tarunner /
 
-from debian:13
+from debian:trixie-20260316
 
 COPY --from=builder --chmod=755 /tarunner /tarunner
 
