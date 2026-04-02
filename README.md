@@ -13,19 +13,24 @@ This program exports all data over the OpenTelemetry Protocol (OTLP). It can be 
 * Download the binary from the [latest release](https://github.com/splunk/tarunner/releases)
 * Run the binary with the following arguments:
   
-  `> tarunner <basedir> <otlp-endpoint>`
+  `> tarunner <basedir>`
   
   `basedir`: the location of the technical addon, uncompressed.
   
-  `otlp-endpoint`: the OTLP gRPC endpoint to target with the runner. Example: `http://localhost:4317`
+  The tarunner expects a tarunner.yaml file located at the root of the TA folder.
 
+  The tarunner.yaml file consists of 3 fields:
+  * `type`: the type of exporter to use. `otlp_http` will use the OTLP HTTP exporter (default value). Any other value is interpreted as sending over Splunk HEC.
+  * `endpoint`: the endpoint to which to send the data. `http://localhost:4318` is the default value.
+  * `token`: the token to set if sending over HEC.
+  
 ## Using Docker
 
 Build the Docker image:
 * `> docker build -t tarunner .`
 
 Run the image:
-* `> docker run --rm -v $(pwd)/ta:/ta /ta http://endpoint:4317`
+* `> docker run --rm -v $(pwd)/ta:/ta /ta`
 
 See also under the `integration` folder a `docker-compose.yml` example.
 

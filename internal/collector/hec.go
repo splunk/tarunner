@@ -6,18 +6,21 @@ package collector
 import (
 	"context"
 
+	"go.opentelemetry.io/collector/config/configopaque"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 )
 
-func newOtlpHttpExporter(logger *zap.Logger, endpoint string) (exporter.Logs, error) {
-	f := otlphttpexporter.NewFactory()
-	cfg := f.CreateDefaultConfig().(*otlphttpexporter.Config)
-	cfg.ClientConfig.Endpoint = endpoint
+func newHECExporter(logger *zap.Logger, endpoint, token string) (exporter.Logs, error) {
+	f := splunkhecexporter.NewFactory()
+	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
+	cfg.Endpoint = endpoint
+	cfg.Token = configopaque.String(token)
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}

@@ -11,6 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.opentelemetry.io/collector/exporter"
+
+	"github.com/splunk/tarunner/internal/config"
+
 	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
 
 	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
@@ -35,14 +39,19 @@ import (
 // The function returns an error if the collector could not start.
 // The function returns a shutdown function handle if any work is scheduled,
 // or nil if the TA has no activity and is therefore safe to exit.
-func Run(baseDir, endpoint string) (func(), error) {
+func Run(baseDir string, cfg *config.Config) (func(), error) {
 	logger, err := zap.NewProduction()
 	if err != nil {
 		return nil, err
 	}
 	meterProvider := noop.NewMeterProvider()
 	tracerProvider := nooptrace.NewTracerProvider()
-	e, err := newExporter(logger, endpoint)
+	var e exporter.Logs
+	if cfg.Type == "otlp_http" {
+		e, err = newOtlpHttpExporter(logger, cfg.Endpoint)
+	} else {
+		e, err = newHECExporter(logger, cfg.Endpoint, cfg.Token)
+	}
 	if err != nil {
 		return nil, err
 	}
