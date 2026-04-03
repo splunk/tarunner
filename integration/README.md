@@ -6,15 +6,9 @@ Please follow the steps below to run this example.
 
 In this folder, run:
 
-```> docker compose --profile splunk up -d```
+```> docker compose up -d```
 
 This will deploy a Splunk instance locally. The instance will start up and be available over localhost:18000 with the credentials `admin` and `changeme`.
-
-## Download and install Splunk Connect for OTLP
-
-Download and install Splunk Connect for OTLP per the steps outlined in https://github.com/splunk/splunk-connect-for-otlp.
-
-Make sure to configure the OTLP endpoint to use 0.0.0.0 so it is exposed by the docker container.
 
 ## Download the Splunk addon for Linux
 
@@ -44,6 +38,6 @@ In the `Splunk_TA_nix` folder created, copy the `default` folder as `local`.
 
 Open local/inputs.conf and edit each `disabled = 1` line to `disabled = 0`.
 
-## Run tarunner
+## Search the main index
 
-```> docker compose --profile splunk --profile tarunner up -d --build```
+Go to the search view and enjoy your TA data by searching for `index=main`
