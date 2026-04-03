@@ -4,6 +4,20 @@
 
 <!-- next version -->
 
+## v0.4.1
+
+### 🛑 Breaking changes 🛑
+
+- `config`: Use a tarunner.yaml file as config file (#72)
+  The tarunner.yaml file is expected to be located at the root of the TA folder.
+  The program now takes a single argument, the base folder path.
+  
+  The tarunner.yaml file consists of 3 fields:
+  * `type`: the type of exporter to use. `otlp_http` will use the OTLP HTTP exporter (default value). Any other value is interpreted as sending over Splunk HEC.
+  * `endpoint`: the endpoint to which to send the data. `http://localhost:4318` is the default value.
+  * `token`: the token to set if sending over HEC.
+  
+
 ## 0.3.0
 
 ### 💡 Enhancements 💡
