@@ -1,0 +1,23 @@
+# One of 'breaking', 'deprecation', 'new_component', 'enhancement', 'bug_fix'
+change_type: breaking
+
+# The name of the component, or a single word describing the area of concern, (e.g. crosslink)
+component: config
+
+# A brief description of the change.  Surround your text with quotes ("") if it needs to start with a backtick (`).
+note: Use a tarunner.yaml file as config file
+
+# One or more tracking issues related to the change
+issues: [72]
+
+# (Optional) One or more lines of additional information to render under the primary note.
+# These lines will be padded with 2 spaces and then inserted directly into the document.
+# Use pipe (|) for multiline entries.
+subtext: |
+  The tarunner.yaml file is expected to be located at the root of the TA folder.
+  The program now takes a single argument, the base folder path.
+  
+  The tarunner.yaml file consists of 3 fields:
+  * `type`: the type of exporter to use. `otlp_http` will use the OTLP HTTP exporter (default value). Any other value is interpreted as sending over Splunk HEC.
+  * `endpoint`: the endpoint to which to send the data. `http://localhost:4318` is the default value.
+  * `token`: the token to set if sending over HEC.

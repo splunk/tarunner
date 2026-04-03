@@ -12,6 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/splunkhecreceiver"
+
+	"github.com/splunk/tarunner/internal/config"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -33,7 +37,10 @@ func TestRunTA(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "ta"), "http://localhost:1337")
+	cancel, err := Run(filepath.Join("testdata", "ta"), &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1337",
+	})
 	require.NoError(t, err)
 	defer cancel()
 
@@ -53,7 +60,10 @@ func TestRunPeriodic(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "periodic"), "http://localhost:1338")
+	cancel, err := Run(filepath.Join("testdata", "periodic"), &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1338",
+	})
 	require.NoError(t, err)
 	defer cancel()
 
@@ -91,7 +101,10 @@ func TestRunDisabled(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "disabled"), "http://localhost:1339")
+	cancel, err := Run(filepath.Join("testdata", "disabled"), &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1339",
+	})
 	require.NoError(t, err)
 	require.Nil(t, cancel)
 	time.Sleep(100 * time.Millisecond)
@@ -110,7 +123,10 @@ func TestRunDisabledInterval(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "disabled_interval"), "http://localhost:1340")
+	cancel, err := Run(filepath.Join("testdata", "disabled_interval"), &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1340",
+	})
 	require.NoError(t, err)
 	defer cancel()
 
@@ -128,7 +144,10 @@ func TestRunScriptedInputs(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "script"), "http://localhost:1341")
+	cancel, err := Run(filepath.Join("testdata", "script"), &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1341",
+	})
 	require.NoError(t, err)
 	defer cancel()
 
@@ -188,7 +207,10 @@ func TestUseTCP(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(rootDir, "http://localhost:1342")
+	cancel, err := Run(rootDir, &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1342",
+	})
 	require.NoError(t, err)
 	defer cancel()
 
@@ -218,7 +240,10 @@ func TestUseUDP(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(rootDir, "http://localhost:1343")
+	cancel, err := Run(rootDir, &config.Config{
+		Type:     "otlp_http",
+		Endpoint: "http://localhost:1343",
+	})
 	require.NoError(t, err)
 	defer cancel()
 	conn, err := net.Dial("udp", "127.0.0.1:4000")
@@ -232,5 +257,28 @@ func TestUseUDP(t *testing.T) {
 		require.GreaterOrEqual(tt, logsSink.LogRecordCount(), 1)
 		lr := logsSink.AllLogs()[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0)
 		assert.Equal(tt, "test", lr.Body().Str())
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestRunScriptedInputsWithHEC(t *testing.T) {
+	logsSink := &consumertest.LogsSink{}
+	cfg := splunkhecreceiver.NewFactory().CreateDefaultConfig().(*splunkhecreceiver.Config)
+	cfg.NetAddr.Endpoint = "localhost:1341"
+	rcvr, err := splunkhecreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(splunkhecreceiver.NewFactory().Type()), cfg, logsSink)
+	require.NoError(t, err)
+	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer func() {
+		_ = rcvr.Shutdown(context.Background())
+	}()
+	cancel, err := Run(filepath.Join("testdata", "script"), &config.Config{
+		Endpoint: "http://localhost:1341",
+		Token:    "foo",
+	})
+	require.NoError(t, err)
+	defer cancel()
+
+	require.EventuallyWithT(t, func(tt *assert.CollectT) {
+		assert.GreaterOrEqual(tt, logsSink.LogRecordCount(), 1)
 	}, 2*time.Second, 10*time.Millisecond)
 }
