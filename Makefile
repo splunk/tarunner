@@ -47,8 +47,8 @@ TAG := $(shell git describe --tags --exact-match 2> /dev/null \
          || git rev-parse --short HEAD)
 .PHONY: docker
 docker:
-	docker build --platform linux/amd64 -t docker.io/library/splunk/tarunner:$(TAG) .
+	docker build --platform linux/amd64 -t splunk/tarunner:$(TAG) .
 
 .PHONY: docker-push
 docker-push: docker
-	docker push docker.io/library/splunk/tarunner:$(TAG)
+	docker push splunk/tarunner:$(TAG)
