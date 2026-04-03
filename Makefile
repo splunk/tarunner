@@ -42,6 +42,13 @@ chlog-update:
 .PHONY: package
 package: windows_amd64_build windows_arm64_build linux_amd64_build linux_arm64_build darwin_amd64_build darwin_arm64_build linux_ppc64le_build aix_ppc64_build
 
+TAG := $(shell git describe --tags --exact-match 2> /dev/null \
+         || git symbolic-ref -q --short HEAD \
+         || git rev-parse --short HEAD)
 .PHONY: docker
 docker:
-	docker build --platform linux/amd64 -t ghcr.io/splunk/tarunner:main .
+	docker build --platform linux/amd64 -t docker.io/library/splunk/tarunner:$(TAG) .
+
+.PHONY: docker-push
+docker-push: docker
+	docker push docker.io/library/splunk/tarunner:$(TAG)
