@@ -6,7 +6,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint/v2 v2.11.3
 	github.com/google/addlicense v1.2.0
-	go.opentelemetry.io/build-tools/chloggen v0.29.0
+	go.opentelemetry.io/build-tools/chloggen v0.30.0
 	golang.org/x/tools v0.43.0
 	mvdan.cc/gofumpt v0.9.2
 )
