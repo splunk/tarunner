@@ -1,11 +1,11 @@
 # This Dockerfile is used by the integration example and installs additional software to try out the Splunk_TA_nix addon.
-from golang:1.26.1 as builder
+from golang:1.26.2 as builder
 
 COPY . .
 
 RUN cd cmd/tarunner && GOOS=linux GOARCH=amd64 go build . && cp tarunner /
 
-from debian:trixie-20260316
+from debian:trixie-20260421
 
 COPY --from=builder --chmod=755 /tarunner /tarunner
 
