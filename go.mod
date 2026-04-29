@@ -3,9 +3,9 @@ module github.com/splunk/tarunner
 go 1.25.7
 
 require (
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.149.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.149.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/splunkhecreceiver v0.149.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.151.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.151.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/splunkhecreceiver v0.151.0
 	go.opentelemetry.io/collector/component v1.55.0
 	go.opentelemetry.io/collector/component/componenttest v0.149.0
 	go.opentelemetry.io/collector/config/configopaque v1.55.0
