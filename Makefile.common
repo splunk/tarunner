@@ -7,6 +7,7 @@ SHELL = /usr/bin/env bash
 
 GOCMD?= go
 GOOS=$(shell $(GOCMD) env GOOS)
+GOARCH=$(shell $(GOCMD) env GOARCH)
 
 ifeq ($(GOOS),windows)
 	# The "sed" transformation below is needed on Windows, since commands like `go list -f '{{ .Dir }}'`
