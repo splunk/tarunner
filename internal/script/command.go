@@ -14,13 +14,14 @@ import (
 )
 
 func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
+	if strings.HasPrefix(input.Configuration.Stanza.Name, "monitor://") {
+		return strings.TrimPrefix(input.Configuration.Stanza.Name, "monitor://"), nil
+	}
 	parsed, err := url.Parse(input.Configuration.Stanza.Name)
 	if err != nil {
 		return "", err
 	}
 	switch parsed.Scheme {
-	case "monitor":
-		return parsed.Path, nil
 	case "script":
 		return GetPath(baseDir, filepath.Join(parsed.Host, parsed.Path))
 	case "":
