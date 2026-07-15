@@ -1,3 +1,6 @@
+// Copyright Splunk, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package monitorreceiver
 
 import (
@@ -11,7 +14,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/pipeline"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/testutil"
-	"github.com/splunk/tarunner/internal/conf"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -19,6 +21,8 @@ import (
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
+
+	"github.com/splunk/tarunner/internal/conf"
 )
 
 func TestReadFile(t *testing.T) {
@@ -60,10 +64,9 @@ func TestReadFile(t *testing.T) {
 		require.NoError(t, o.Stop())
 	}()
 
-	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("foo\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("foo\n"), 0o644))
 	received := <-output.Received
 	require.Equal(t, "foo\n", received.Body)
-
 }
 
 func TestRenameMetadata(t *testing.T) {
