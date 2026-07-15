@@ -16,12 +16,15 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/split"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/trim"
 	"go.opentelemetry.io/collector/component"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/internal/operator/prop"
 	"github.com/splunk/tarunner/internal/script"
 )
 
-type monitor struct{}
+type monitor struct {
+	logger *zap.Logger
+}
 
 // Type is the receiver type
 func (monitor) Type() component.Type {
@@ -73,6 +76,7 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	oc := file.NewConfig()
 	path, err := script.DetermineCommandName(rcfg.BaseDir, rcfg.Input)
 	if err != nil {
+		t.logger.Error("error reading command", zap.Error(err))
 		return operator.NewConfig(oc)
 	}
 	allowlist := path

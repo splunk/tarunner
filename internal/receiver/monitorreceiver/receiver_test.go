@@ -44,8 +44,8 @@ func TestReadFile(t *testing.T) {
 			},
 		},
 	}
-	c := monitor{}.InputConfig(cfg)
 	logger, _ := zap.NewDevelopment()
+	c := monitor{logger: logger}.InputConfig(cfg)
 	o, err := c.Build(component.TelemetrySettings{
 		Logger:         logger,
 		TracerProvider: nooptrace.NewTracerProvider(),
