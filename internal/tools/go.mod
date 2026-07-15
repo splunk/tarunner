@@ -8,7 +8,7 @@ require (
 	github.com/google/addlicense v1.2.0
 	go.opentelemetry.io/build-tools/chloggen v0.30.0
 	golang.org/x/tools v0.48.0
-	mvdan.cc/gofumpt v0.9.2
+	mvdan.cc/gofumpt v0.10.0
 )
 
 require (
