@@ -6,24 +6,25 @@ package monitorreceiver
 import (
 	"path/filepath"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
-
-	"github.com/splunk/tarunner/internal/operator/prop"
-
-	"github.com/splunk/tarunner/internal/script"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/split"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/trim"
 	"go.opentelemetry.io/collector/component"
+	"go.uber.org/zap"
+
+	"github.com/splunk/tarunner/internal/operator/prop"
+	"github.com/splunk/tarunner/internal/script"
 )
 
-type monitor struct{}
+type monitor struct {
+	logger *zap.Logger
+}
 
 // Type is the receiver type
 func (monitor) Type() component.Type {
@@ -75,6 +76,7 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	oc := file.NewConfig()
 	path, err := script.DetermineCommandName(rcfg.BaseDir, rcfg.Input)
 	if err != nil {
+		t.logger.Error("error reading command", zap.Error(err))
 		return operator.NewConfig(oc)
 	}
 	allowlist := path
@@ -85,7 +87,6 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
 	}
-	oc.Attributes = map[string]helper.ExprStringConfig{}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.
 		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
@@ -104,7 +105,15 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	}
 
 	oc.IncludeFilePath = true
-	oc.Encoding = "nop"
+	oc.Encoding = "utf-8"
+	oc.StartAt = "beginning"
+	oc.SplitConfig = split.Config{
+		LineStartPattern: "^",
+	}
+	oc.TrimConfig = trim.Config{
+		PreserveLeading:  true,
+		PreserveTrailing: true,
+	}
 
 	return operator.NewConfig(oc)
 }
@@ -124,9 +133,9 @@ func renameMetadata() []operator.Config {
 
 	host := move.NewConfigWithID("end-host")
 	host.From = entry.NewAttributeField("host")
-	host.To = entry.NewAttributeField("com.splunk.host")
+	host.To = entry.NewAttributeField("host.name")
 	host.OnError = "send_quiet"
-	sourceType.OutputIDs = []string{"end-index"}
+	host.OutputIDs = []string{"end-index"}
 
 	index := move.NewConfigWithID("end-index")
 	index.From = entry.NewAttributeField("index")

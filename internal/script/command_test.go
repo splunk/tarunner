@@ -14,6 +14,12 @@ import (
 	"github.com/splunk/tarunner/internal/conf"
 )
 
+func TestDetermineCommandNameWindows(t *testing.T) {
+	path, err := DetermineCommandName("", conf.Input{Configuration: conf.Configuration{Stanza: conf.Stanza{Name: "monitor://C:\\foo\\bar.txt"}}})
+	require.NoError(t, err)
+	require.Equal(t, "C:\\foo\\bar.txt", path)
+}
+
 func TestDetermineCommandName(t *testing.T) {
 	tests := []struct {
 		name        string
