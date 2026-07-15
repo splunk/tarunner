@@ -32,7 +32,7 @@ func TestReadFile(t *testing.T) {
 		Input: conf.Input{
 			Configuration: conf.Configuration{
 				Stanza: conf.Stanza{
-					Name: fmt.Sprintf("monitor://%s", filepath.Join(tempDir, "foo.txt")),
+					Name: fmt.Sprintf("monitor://%s%c%s", tempDir, filepath.Separator, "foo.txt"),
 					App:  "",
 					Params: conf.Params{
 						conf.Param{
