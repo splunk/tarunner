@@ -102,9 +102,9 @@ func renameMetadata() []operator.Config {
 
 	host := move.NewConfigWithID("end-host")
 	host.From = entry.NewAttributeField("host")
-	host.To = entry.NewAttributeField("com.splunk.host")
+	host.To = entry.NewAttributeField("host.name")
 	host.OnError = "send_quiet"
-	sourceType.OutputIDs = []string{"end-index"}
+	host.OutputIDs = []string{"end-index"}
 
 	index := move.NewConfigWithID("end-index")
 	index.From = entry.NewAttributeField("index")

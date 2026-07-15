@@ -1,0 +1,93 @@
+package monitorreceiver
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/pipeline"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/testutil"
+	"github.com/splunk/tarunner/internal/conf"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
+	"go.uber.org/zap"
+)
+
+func TestReadFile(t *testing.T) {
+	tempDir := t.TempDir()
+
+	cfg := Config{
+		Input: conf.Input{
+			Configuration: conf.Configuration{
+				Stanza: conf.Stanza{
+					Name: fmt.Sprintf("monitor://%s/foo.txt", tempDir),
+					App:  "",
+					Params: conf.Params{
+						conf.Param{
+							Name:  "host",
+							Value: "myhost",
+						},
+					},
+				},
+			},
+		},
+	}
+	c := monitor{}.InputConfig(cfg)
+	logger, _ := zap.NewDevelopment()
+	o, err := c.Build(component.TelemetrySettings{
+		Logger:         logger,
+		TracerProvider: nooptrace.NewTracerProvider(),
+		MeterProvider:  noopmetric.NewMeterProvider(),
+		Resource:       pcommon.NewResource(),
+	})
+	require.NoError(t, err)
+	output := testutil.NewFakeOutput(t)
+	o.SetOutputIDs([]string{"fake"})
+	require.NoError(t, o.SetOutputs([]operator.Operator{
+		output,
+	}))
+	err = o.Start(nil)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, o.Stop())
+	}()
+
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("foo\n"), 0644))
+	received := <-output.Received
+	require.Equal(t, "foo\n", received.Body)
+
+}
+
+func TestRenameMetadata(t *testing.T) {
+	ops := renameMetadata()
+	output := testutil.NewFakeOutput(t)
+	pipe, err := pipeline.Config{
+		Operators:     ops,
+		DefaultOutput: output,
+	}.Build(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
+	require.NoError(t, pipe.Start(nil))
+	defer func() {
+		require.NoError(t, pipe.Stop())
+	}()
+	require.NoError(t, pipe.Operators()[0].Process(context.Background(), &entry.Entry{
+		Attributes: map[string]any{
+			"source":     "src",
+			"sourcetype": "srctype",
+			"host":       "foo",
+		},
+	}))
+
+	result := <-output.Received
+	require.Equal(t, "src", result.Attributes["com.splunk.source"])
+	require.Equal(t, "srctype", result.Attributes["com.splunk.sourcetype"])
+	require.Equal(t, "foo", result.Attributes["host.name"])
+}
