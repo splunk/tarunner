@@ -52,3 +52,9 @@ docker:
 .PHONY: docker-push
 docker-push: docker
 	docker push splunk/tarunner:$(TAG)
+
+.PHONY: release
+release:
+	git tag $(VERSION)
+	git tag pkg/tareceiver/$(VERSION)
+	git push origin --tags

@@ -37,5 +37,8 @@ To create a new changelog entry, type `make chlog-new`.
 
 Follow the template and fill the information requested.
 
+# Release
 
-
+```bash
+VERSION=vx.x.x make release 
+```
