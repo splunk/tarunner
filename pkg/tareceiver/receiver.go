@@ -8,15 +8,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/receiver"
+
 	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
 	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
 	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
 	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
 	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/receiver"
 )
 
 var nopInstance = &nopReceiver{}
