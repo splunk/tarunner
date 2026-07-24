@@ -1,4 +1,7 @@
-package tareceiver
+// Copyright Splunk, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+package splunkinputsreceiver
 
 import (
 	"go.opentelemetry.io/collector/component"
@@ -6,7 +9,7 @@ import (
 )
 
 func NewFactory() receiver.Factory {
-	return receiver.NewFactory(component.MustNewType("ta"), createDefaultConfig, receiver.WithLogs(createLogsFunc, component.StabilityLevelDevelopment))
+	return receiver.NewFactory(component.MustNewType("splunk_inputs"), createDefaultConfig, receiver.WithLogs(createLogsFunc, component.StabilityLevelDevelopment))
 }
 
 func createDefaultConfig() component.Config {
