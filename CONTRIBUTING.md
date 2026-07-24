@@ -37,5 +37,20 @@ To create a new changelog entry, type `make chlog-new`.
 
 Follow the template and fill the information requested.
 
+### Release
 
+On latest main, run the following (replace VERSION with semver version).
 
+First, prepare the release notes, as a PR.
+```sh
+make chlog-update VERSION=vVERSION
+```
+
+Tag and push:
+```sh
+git tag vVERSION
+git tag pkg/splunkinputsreceiver/vVERSION
+git push origin main --tags
+```
+
+The build will create the GitHub release and push the assets.
