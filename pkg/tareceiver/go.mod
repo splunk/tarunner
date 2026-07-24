@@ -1,4 +1,4 @@
-module github.com/splunk/tarunner/pkg/tareceiver
+module github.com/splunk/tarunner/pkg/splunkinputsreceiver
 
 go 1.26
 
