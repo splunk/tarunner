@@ -4,6 +4,16 @@
 
 <!-- next version -->
 
+## v0.5.0
+
+### 🚀 New components 🚀
+
+- `splunkinputsreceiver`: Expose tarunner as a receiver (#93)
+
+### 🧰 Bug fixes 🧰
+
+- `all`: fix chain of operators (#90)
+
 ## v0.4.1
 
 ### 🛑 Breaking changes 🛑
