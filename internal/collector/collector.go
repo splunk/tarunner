@@ -5,34 +5,15 @@ package collector
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
-
-	"go.opentelemetry.io/collector/exporter"
-
-	"github.com/splunk/tarunner/internal/config"
-
-	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
-
-	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
-
-	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/receiver"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/otel/metric/noop"
-	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 
-	"github.com/splunk/tarunner/internal/conf"
-	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
-	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
+	"github.com/splunk/tarunner/internal/config"
+	"github.com/splunk/tarunner/internal/tabuilder"
 )
 
 // Run runs the collector with a baseDir working directory and an OTLP endpoint.
@@ -55,20 +36,25 @@ func Run(baseDir string, cfg *config.Config) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := readInputs(baseDir)
+	inputs, err := tabuilder.ReadInputs(baseDir)
 	if err != nil {
 		return nil, err
 	}
-	transforms, err := readTransforms(baseDir)
+	transforms, err := tabuilder.ReadTransforms(baseDir)
 	if err != nil {
 		return nil, err
 	}
-	props, err := readProps(baseDir)
+	props, err := tabuilder.ReadProps(baseDir)
 	if err != nil {
 		return nil, err
 	}
 
-	receivers, err := createReceivers(inputs, transforms, props, baseDir, e, logger, meterProvider, tracerProvider)
+	telemetrySettings := component.TelemetrySettings{
+		Logger:         logger,
+		MeterProvider:  meterProvider,
+		TracerProvider: tracerProvider,
+	}
+	receivers, err := tabuilder.CreateReceivers(context.Background(), inputs, transforms, props, baseDir, e, telemetrySettings)
 	if err != nil {
 		return nil, err
 	}
@@ -98,161 +84,4 @@ func Run(baseDir string, cfg *config.Config) (func(), error) {
 	}
 
 	return shutDownFunc, nil
-}
-
-func createReceivers(inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) ([]receiver.Logs, error) {
-	var receivers []receiver.Logs
-	for _, input := range inputs {
-		disabled := input.Configuration.Stanza.Params.Get("disabled")
-		if disabled != nil && disabled.Value == "1" {
-			continue
-		}
-		l, err := createReceiver(baseDir, next, input, transforms, props, logger, meterProvider, tracerProvider)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
-		}
-		receivers = append(receivers, l)
-	}
-	return receivers, nil
-}
-
-func readInputs(baseDir string) ([]conf.Input, error) {
-	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "inputs.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadInput(b)
-}
-
-func readTransforms(baseDir string) ([]conf.Transform, error) {
-	fileToRead := filepath.Join(baseDir, "local", "transforms.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "transforms.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadTransforms(b)
-}
-
-func readProps(baseDir string) ([]conf.Prop, error) {
-	fileToRead := filepath.Join(baseDir, "local", "props.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "props.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadProps(b)
-}
-
-func createReceiver(baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, logger *zap.Logger, meterProvider metric.MeterProvider, tracerProvider trace.TracerProvider) (receiver.Logs, error) {
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
-	if err != nil {
-		return nil, err
-	}
-	switch parsed.Scheme {
-	case "script", "":
-		f := scriptreceiver.NewFactory()
-		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
-			TelemetrySettings: component.TelemetrySettings{
-				Logger:         logger,
-				MeterProvider:  meterProvider,
-				TracerProvider: tracerProvider,
-			},
-		}, &scriptreceiver.Config{
-			Input:      input,
-			BaseDir:    baseDir,
-			Transforms: transforms,
-			Props:      props,
-		},
-			next)
-		return l, err
-	case "monitor":
-		f := monitorreceiver.NewFactory()
-		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
-			TelemetrySettings: component.TelemetrySettings{
-				Logger:         logger,
-				MeterProvider:  meterProvider,
-				TracerProvider: tracerProvider,
-			},
-		}, monitorreceiver.Config{
-			Input:      input,
-			BaseDir:    baseDir,
-			Transforms: transforms,
-			Props:      props,
-		},
-			next)
-		return l, err
-	case "WinEventLog":
-		f := wineventlogreceiver.NewFactory()
-		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
-			TelemetrySettings: component.TelemetrySettings{
-				Logger:         logger,
-				MeterProvider:  meterProvider,
-				TracerProvider: tracerProvider,
-			},
-		}, wineventlogreceiver.Config{
-			Input:      input,
-			BaseDir:    baseDir,
-			Transforms: transforms,
-			Props:      props,
-		},
-			next)
-		return l, err
-	case "tcp":
-		f := tcpreceiver.NewFactory()
-		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
-			TelemetrySettings: component.TelemetrySettings{
-				Logger:         logger,
-				MeterProvider:  meterProvider,
-				TracerProvider: tracerProvider,
-			},
-		}, tcpreceiver.Config{
-			Input:      input,
-			BaseDir:    baseDir,
-			Transforms: transforms,
-			Props:      props,
-		},
-			next)
-		return l, err
-	case "udp":
-		f := udpreceiver.NewFactory()
-		l, err := f.CreateLogs(context.Background(), receiver.Settings{
-			ID: component.MustNewIDWithName(f.Type().String(), parsed.Path),
-			TelemetrySettings: component.TelemetrySettings{
-				Logger:         logger,
-				MeterProvider:  meterProvider,
-				TracerProvider: tracerProvider,
-			},
-		}, udpreceiver.Config{
-			Input:      input,
-			BaseDir:    baseDir,
-			Transforms: transforms,
-			Props:      props,
-		},
-			next)
-		return l, err
-	default:
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Scheme)
-	}
 }
