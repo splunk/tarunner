@@ -17,6 +17,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configopaque"
+	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/exporter"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -66,6 +67,7 @@ func newHECExporter(o conf.Output, logger *zap.Logger, telemetrySettings compone
 	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
 	cfg.Endpoint = o.URI
 	cfg.Token = configopaque.String(o.Token)
+	cfg.ClientConfig.TLS = configtls.ClientConfig{InsecureSkipVerify: true} // TODO: wire sslVerifyServerCert from outputs.conf
 	if o.BatchSize > 0 {
 		cfg.MaxContentLengthLogs = uint(o.BatchSize)
 	}
