@@ -14,8 +14,11 @@ import (
 )
 
 func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
-	if strings.HasPrefix(input.Configuration.Stanza.Name, "monitor://") {
-		return strings.TrimPrefix(input.Configuration.Stanza.Name, "monitor://"), nil
+	if after, ok := strings.CutPrefix(input.Configuration.Stanza.Name, "monitor://"); ok {
+		return after, nil
+	}
+	if after, ok := strings.CutPrefix(input.Configuration.Stanza.Name, "batch://"); ok {
+		return after, nil
 	}
 	parsed, err := url.Parse(input.Configuration.Stanza.Name)
 	if err != nil {
