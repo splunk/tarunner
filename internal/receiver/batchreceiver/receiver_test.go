@@ -11,11 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/pipeline"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -29,12 +31,12 @@ import (
 
 func TestReadFile(t *testing.T) {
 	tempDir := t.TempDir()
-	file := fmt.Sprintf("batch://%s%c%s", tempDir, filepath.Separator, "foo.txt")
+	file := fmt.Sprintf("%s%c%s", tempDir, filepath.Separator, "foo.txt")
 	cfg := Config{
 		Input: conf.Input{
 			Configuration: conf.Configuration{
 				Stanza: conf.Stanza{
-					Name: file,
+					Name: fmt.Sprintf("batch://%s", file),
 					App:  "",
 					Params: conf.Params{
 						conf.Param{
@@ -69,8 +71,10 @@ func TestReadFile(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("foo\n"), 0o644))
 	received := <-output.Received
 	require.Equal(t, "foo\n", received.Body)
-	_, err = os.Stat(file)
-	require.True(t, errors.Is(err, fs.ErrNotExist))
+	require.EventuallyWithT(t, func(tt *assert.CollectT) {
+		_, err = os.Stat(file)
+		require.True(tt, errors.Is(err, fs.ErrNotExist), err)
+	}, 1*time.Second, 100*time.Millisecond)
 }
 
 func TestRenameMetadata(t *testing.T) {
