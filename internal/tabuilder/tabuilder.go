@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/internal/receiver/batchreceiver"
 	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
 	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
 	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
@@ -55,6 +56,14 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 	switch parsed.Scheme {
 	case "script", "":
 		f := scriptreceiver.NewFactory()
+		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), &scriptreceiver.Config{
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
+		}, next)
+	case "batch":
+		f := batchreceiver.NewFactory()
 		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), &scriptreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
