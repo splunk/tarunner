@@ -7,13 +7,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os/exec"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/splunk/tarunner/internal/script"
+	"github.com/splunk/tarunner/internal/stanza"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
@@ -48,17 +48,17 @@ func (si *ScriptedInput) Stop() error {
 }
 
 func (si *ScriptedInput) scheduleInput(baseDir string, input conf.Input) (bool, error) {
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
+	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
 		return false, err
 	}
-	switch parsed.Scheme {
+	switch parsed.Kind {
 	case "script":
 		return si.scheduleScriptedInput(baseDir, input)
 	case "":
 		return si.scheduleScriptedInput(baseDir, input)
 	default:
-		return false, fmt.Errorf("unknown scheme %q", parsed.Scheme)
+		return false, fmt.Errorf("unknown scheme %q", parsed.Kind)
 	}
 }
 
