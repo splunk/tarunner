@@ -78,7 +78,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 			Transforms: transforms,
 			Props:      props,
 		}, next)
-	case "WinEventLog":
+	case "wineventlog":
 		f := wineventlogreceiver.NewFactory()
 		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), wineventlogreceiver.Config{
 			Input:      input,
