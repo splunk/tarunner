@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
 
-	"github.com/splunk/tarunner/internal/outputsbuilder"
+	"github.com/splunk/tarunner/internal/tabuilder"
 )
 
 func NewFactory() exporter.Factory {
@@ -37,12 +37,12 @@ func createLogsFunc(_ context.Context, settings exporter.Settings, config compon
 		return nil, fmt.Errorf("splunk_outputs: base_dir is not set and SPLUNK_HOME is not defined")
 	}
 
-	outputs, err := outputsbuilder.ReadOutputs(baseDir)
+	outputs, err := tabuilder.ReadOutputs(baseDir)
 	if err != nil {
 		return nil, fmt.Errorf("splunk_outputs: failed to read outputs.conf from %q: %w", baseDir, err)
 	}
 
-	exporters, err := outputsbuilder.CreateExporters(outputs, settings.Logger, settings.TelemetrySettings)
+	exporters, err := tabuilder.CreateExporters(outputs, settings.Logger, settings.TelemetrySettings)
 	if err != nil {
 		return nil, fmt.Errorf("splunk_outputs: %w", err)
 	}

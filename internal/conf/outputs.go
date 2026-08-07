@@ -13,10 +13,10 @@ import (
 type Output struct {
 	// Name is the stanza name, e.g. "httpout" or "httpout:primary".
 	Name         string
-	Token        string `xml:"httpEventCollectorToken"`
-	URI          string `xml:"uri"`
-	BatchSize    int    `xml:"batchSize"`
-	BatchTimeout int    `xml:"batchTimeout"`
+	Token        string
+	URI          string
+	BatchSize    int
+	BatchTimeout int
 }
 
 // IsHTTPOut reports whether this stanza is a httpout stanza.
