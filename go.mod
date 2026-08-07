@@ -9,6 +9,7 @@ require (
 	go.opentelemetry.io/collector/component v1.63.0
 	go.opentelemetry.io/collector/component/componenttest v0.157.0
 	go.opentelemetry.io/collector/config/configopaque v1.63.0
+	go.opentelemetry.io/collector/config/configtls v1.63.0
 	go.opentelemetry.io/collector/confmap v1.63.0
 	go.opentelemetry.io/collector/consumer v1.63.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.157.0
@@ -89,7 +90,6 @@ require (
 	go.opentelemetry.io/collector/config/confignet v1.63.0 // indirect
 	go.opentelemetry.io/collector/config/configoptional v1.63.0 // indirect
 	go.opentelemetry.io/collector/config/configretry v1.63.0 // indirect
-	go.opentelemetry.io/collector/config/configtls v1.63.0 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.157.0 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror/xconsumererror v0.157.0 // indirect
 	go.opentelemetry.io/collector/consumer/xconsumer v0.157.0 // indirect
