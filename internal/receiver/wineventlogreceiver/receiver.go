@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 
 	"github.com/splunk/tarunner/internal/operator/prop"
+	"github.com/splunk/tarunner/internal/stanza"
 )
 
 type welreceiver struct{}
@@ -68,7 +69,8 @@ func createSetSourceOperator() operator.Config {
 func (t welreceiver) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(Config)
 	oc := windows.NewConfig()
-	oc.Channel = rcfg.Input.Configuration.Stanza.Name
+	parsed, _ := stanza.ParseName(rcfg.Input.Configuration.Stanza.Name)
+	oc.Channel = parsed.Target
 	oc.Attributes = map[string]helper.ExprStringConfig{}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.

@@ -4,8 +4,6 @@
 package tcpreceiver
 
 import (
-	"net/url"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/tcp"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
 
@@ -14,6 +12,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 
 	"github.com/splunk/tarunner/internal/operator/prop"
+	"github.com/splunk/tarunner/internal/stanza"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
@@ -62,8 +61,8 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 func (t monitor) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(Config)
 	oc := tcp.NewConfig()
-	listenAddress, _ := url.Parse(rcfg.Input.Configuration.Stanza.Name)
-	oc.ListenAddress = listenAddress.Host
+	listenAddress, _ := stanza.ParseName(rcfg.Input.Configuration.Stanza.Name)
+	oc.ListenAddress = stanza.ListenAddress(listenAddress.Target)
 	oc.Attributes = map[string]helper.ExprStringConfig{}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.
