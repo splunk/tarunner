@@ -1,0 +1,19 @@
+# One of 'breaking', 'deprecation', 'new_component', 'enhancement', 'bug_fix'
+change_type: new_component
+
+# The name of the component, or a single word describing the area of concern, (e.g. crosslink)
+component: splunkoutputsexporter
+
+# A brief description of the change.  Surround your text with quotes ("") if it needs to start with a backtick (`).
+note: Add `splunk_outputs` exporter that reads `outputs.conf` and forwards logs to configured `httpout` HEC endpoints without requiring explicit YAML exporter configuration.
+
+# One or more tracking issues related to the change
+issues: [476]
+
+# (Optional) One or more lines of additional information to render under the primary note.
+# These lines will be padded with 2 spaces and then inserted directly into the document.
+# Use pipe (|) for multiline entries.
+subtext: |
+  The exporter reads `outputs.conf` from `base_dir` (or `$SPLUNK_HOME` if unset),
+  preferring `local/` over `default/`. All `httpout` stanzas are mapped to internal
+  `splunk_hec` exporters and logs are fanned out to all of them.
