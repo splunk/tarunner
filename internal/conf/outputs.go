@@ -12,11 +12,12 @@ import (
 // Output represents a single stanza from outputs.conf.
 type Output struct {
 	// Name is the stanza name, e.g. "httpout" or "httpout:primary".
-	Name         string
-	Token        string
-	URI          string
-	BatchSize    int
-	BatchTimeout int
+	Name  string
+	Token string
+	URI   string
+	// TODO: BatchSize and BatchTimeout from outputs.conf are not yet wired.
+	// BatchSize maps to batcher MinSizeBytes, BatchTimeout to batcher FlushTimeout.
+	// Both require configuring BatcherConfig on the exporter helper.
 }
 
 // IsHTTPOut reports whether this stanza is a httpout stanza.
@@ -36,11 +37,9 @@ func ReadOutputs(payload []byte) ([]Output, error) {
 			continue
 		}
 		result = append(result, Output{
-			Name:         section.Name(),
-			Token:        section.Key("httpEventCollectorToken").String(),
-			URI:          section.Key("uri").String(),
-			BatchSize:    section.Key("batchSize").MustInt(),
-			BatchTimeout: section.Key("batchTimeout").MustInt(),
+			Name:  section.Name(),
+			Token: section.Key("httpEventCollectorToken").String(),
+			URI:   section.Key("uri").String(),
 		})
 	}
 	return result, nil

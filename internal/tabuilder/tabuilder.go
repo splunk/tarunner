@@ -206,9 +206,6 @@ func newHECExporter(o conf.Output, logger *zap.Logger, telemetrySettings compone
 	cfg.Endpoint = o.URI
 	cfg.Token = configopaque.String(o.Token)
 	cfg.TLS = configtls.ClientConfig{InsecureSkipVerify: true} // TODO: wire sslVerifyServerCert from outputs.conf
-	if o.BatchSize > 0 {
-		cfg.MaxContentLengthLogs = uint(o.BatchSize)
-	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
