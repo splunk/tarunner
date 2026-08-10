@@ -64,7 +64,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "batch":
 		f := batchreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), &scriptreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), batchreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
