@@ -15,20 +15,16 @@ func TestReadOutputs(t *testing.T) {
 	payload, err := os.ReadFile("testdata/outputs.conf")
 	require.NoError(t, err)
 
-	outputs, err := ReadOutputs(payload)
+	output, err := ReadOutputs(payload)
 	require.NoError(t, err)
-	require.Len(t, outputs, 3)
+	require.NotNil(t, output)
 
-	assert.Equal(t, "httpout", outputs[0].Name)
-	assert.Equal(t, "token-default", outputs[0].Token)
-	assert.Equal(t, "https://splunk:8088/services/collector/event", outputs[0].URI)
-	assert.True(t, outputs[0].IsHTTPOut())
+	assert.Equal(t, "token-default", output.Token)
+	assert.Equal(t, "https://splunk:8088/services/collector/event", output.URI)
+}
 
-	assert.Equal(t, "httpout:secondary", outputs[1].Name)
-	assert.Equal(t, "token-secondary", outputs[1].Token)
-	assert.Equal(t, "https://splunk2:8088/services/collector/event", outputs[1].URI)
-	assert.True(t, outputs[1].IsHTTPOut())
-
-	assert.Equal(t, "tcpout", outputs[2].Name)
-	assert.False(t, outputs[2].IsHTTPOut())
+func TestReadOutputsNoHTTPOut(t *testing.T) {
+	output, err := ReadOutputs([]byte("[tcpout]\nserver = splunk:9997\n"))
+	require.NoError(t, err)
+	assert.Nil(t, output)
 }

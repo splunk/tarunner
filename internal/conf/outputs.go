@@ -4,15 +4,12 @@
 package conf
 
 import (
-	"strings"
-
 	"gopkg.in/ini.v1"
 )
 
-// Output represents a single stanza from outputs.conf.
+// Output holds the settings from the [httpout] stanza in outputs.conf.
+// outputs.conf supports exactly one [httpout] stanza.
 type Output struct {
-	// Name is the stanza name, e.g. "httpout" or "httpout:primary".
-	Name  string
 	Token string
 	URI   string
 	// TODO: BatchSize and BatchTimeout from outputs.conf are not yet wired.
@@ -20,27 +17,20 @@ type Output struct {
 	// Both require configuring BatcherConfig on the exporter helper.
 }
 
-// IsHTTPOut reports whether this stanza is a httpout stanza.
-func (o Output) IsHTTPOut() bool {
-	return o.Name == "httpout" || strings.HasPrefix(o.Name, "httpout:")
-}
-
-// ReadOutputs parses an outputs.conf payload into a slice of Output.
-func ReadOutputs(payload []byte) ([]Output, error) {
+// ReadOutputs parses an outputs.conf payload and returns the [httpout] stanza,
+// or nil if no [httpout] stanza is present.
+func ReadOutputs(payload []byte) (*Output, error) {
 	f, err := ini.Load(payload)
 	if err != nil {
 		return nil, err
 	}
-	var result []Output
-	for _, section := range f.Sections() {
-		if section.Name() == ini.DefaultSection {
-			continue
-		}
-		result = append(result, Output{
-			Name:  section.Name(),
-			Token: section.Key("httpEventCollectorToken").String(),
-			URI:   section.Key("uri").String(),
-		})
+	section, err := f.GetSection("httpout")
+	if err != nil {
+		// Section not found — ini returns an error in this case.
+		return nil, nil
 	}
-	return result, nil
+	return &Output{
+		Token: section.Key("httpEventCollectorToken").String(),
+		URI:   section.Key("uri").String(),
+	}, nil
 }

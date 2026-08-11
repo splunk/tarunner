@@ -7,5 +7,5 @@ package splunkoutputsexporter
 type Config struct {
 	// BaseDir is the directory containing local/ or default/ subdirectories
 	// with outputs.conf. Defaults to $SPLUNK_HOME if empty.
-	BaseDir string `mapstructure:"base_dir"`
+	BaseDir string `mapstructure:"path"`
 }

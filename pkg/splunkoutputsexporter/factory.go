@@ -34,18 +34,18 @@ func createLogsFunc(_ context.Context, settings exporter.Settings, config compon
 		baseDir = os.Getenv("SPLUNK_HOME")
 	}
 	if baseDir == "" {
-		return nil, fmt.Errorf("splunk_outputs: base_dir is not set and SPLUNK_HOME is not defined")
+		return nil, fmt.Errorf("splunk_outputs: path is not set and SPLUNK_HOME is not defined")
 	}
 
-	outputs, err := tabuilder.ReadOutputs(baseDir)
+	output, err := tabuilder.ReadOutputs(baseDir)
 	if err != nil {
 		return nil, fmt.Errorf("splunk_outputs: failed to read outputs.conf from %q: %w", baseDir, err)
 	}
 
-	exporters, err := tabuilder.CreateExporters(outputs, settings.Logger, settings.TelemetrySettings)
+	exp, err := tabuilder.CreateExporter(output, settings.Logger, settings.TelemetrySettings)
 	if err != nil {
 		return nil, fmt.Errorf("splunk_outputs: %w", err)
 	}
 
-	return &aggregateExporter{exporters: exporters}, nil
+	return exp, nil
 }

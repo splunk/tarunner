@@ -165,7 +165,8 @@ func ReadProps(baseDir string) ([]conf.Prop, error) {
 }
 
 // ReadOutputs reads outputs.conf from baseDir, preferring local/ over default/.
-func ReadOutputs(baseDir string) ([]conf.Output, error) {
+// Returns the [httpout] stanza, or nil if no [httpout] stanza is present.
+func ReadOutputs(baseDir string) (*conf.Output, error) {
 	fileToRead := filepath.Join(baseDir, "local", "outputs.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
 		fileToRead = filepath.Join(baseDir, "default", "outputs.conf")
@@ -180,27 +181,16 @@ func ReadOutputs(baseDir string) ([]conf.Output, error) {
 	return conf.ReadOutputs(b)
 }
 
-// CreateExporters builds a logs exporter for every httpout stanza in outputs.
-// Returns an error if no httpout stanzas are found.
-func CreateExporters(outputs []conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) ([]exporter.Logs, error) {
-	var exporters []exporter.Logs
-	for _, o := range outputs {
-		if !o.IsHTTPOut() {
-			continue
-		}
-		e, err := newHECExporter(o, logger, telemetrySettings)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create exporter for stanza %q: %w", o.Name, err)
-		}
-		exporters = append(exporters, e)
+// CreateExporter builds a logs exporter from the [httpout] stanza.
+// Returns an error if output is nil (no [httpout] stanza in outputs.conf).
+func CreateExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+	if output == nil {
+		return nil, errors.New("no [httpout] stanza found in outputs.conf")
 	}
-	if len(exporters) == 0 {
-		return nil, errors.New("no httpout stanzas found in outputs.conf")
-	}
-	return exporters, nil
+	return newHECExporter(output, logger, telemetrySettings)
 }
 
-func newHECExporter(o conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+func newHECExporter(o *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	f := splunkhecexporter.NewFactory()
 	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
 	cfg.Endpoint = o.URI
@@ -210,7 +200,7 @@ func newHECExporter(o conf.Output, logger *zap.Logger, telemetrySettings compone
 		return nil, err
 	}
 	s := exporter.Settings{
-		ID: component.MustNewIDWithName(f.Type().String(), o.Name),
+		ID: component.MustNewID(f.Type().String()),
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         logger,
 			TracerProvider: tracenoop.NewTracerProvider(),
