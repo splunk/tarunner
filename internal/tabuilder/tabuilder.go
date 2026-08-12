@@ -182,11 +182,7 @@ func ReadOutputs(baseDir string) (*conf.Output, error) {
 }
 
 // CreateExporter builds a logs exporter from the [httpout] stanza.
-// Returns an error if output is nil (no [httpout] stanza in outputs.conf).
 func CreateExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
-	if output == nil {
-		return nil, errors.New("no [httpout] stanza found in outputs.conf")
-	}
 	return newHECExporter(output, logger, telemetrySettings)
 }
 

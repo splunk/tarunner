@@ -24,7 +24,6 @@ func TestReadOutputs(t *testing.T) {
 }
 
 func TestReadOutputsNoHTTPOut(t *testing.T) {
-	output, err := ReadOutputs([]byte("[tcpout]\nserver = splunk:9997\n"))
-	require.NoError(t, err)
-	assert.Nil(t, output)
+	_, err := ReadOutputs([]byte("[tcpout]\nserver = splunk:9997\n"))
+	require.ErrorIs(t, err, ErrNoHTTPOut)
 }
