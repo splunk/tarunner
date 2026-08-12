@@ -4,9 +4,8 @@
 package udpreceiver
 
 import (
-	"net/url"
-
 	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/internal/stanza"
 )
 
 type Config struct {
@@ -18,6 +17,6 @@ type Config struct {
 }
 
 func (cfg *Config) Validate() error {
-	_, err := url.Parse(cfg.Input.Configuration.Stanza.Name)
+	_, err := stanza.ParseName(cfg.Input.Configuration.Stanza.Name)
 	return err
 }

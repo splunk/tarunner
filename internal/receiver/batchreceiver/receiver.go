@@ -1,33 +1,38 @@
 // Copyright Splunk, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build windows
-
-package wineventlogreceiver
+package batchreceiver
 
 import (
+	"path/filepath"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/windows"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/split"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/trim"
 	"go.opentelemetry.io/collector/component"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/internal/operator/prop"
-	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/internal/script"
 )
 
-type welreceiver struct{}
+type batch struct {
+	logger *zap.Logger
+}
 
 // Type is the receiver type
-func (welreceiver) Type() component.Type {
-	return component.MustNewType("windowseventlog")
+func (batch) Type() component.Type {
+	return component.MustNewType("batch")
 }
 
 // CreateDefaultConfig creates a config with type and version
-func (welreceiver) CreateDefaultConfig() component.Config {
+func (batch) CreateDefaultConfig() component.Config {
 	return createDefaultConfig()
 }
 
@@ -36,7 +41,7 @@ func createDefaultConfig() *Config {
 }
 
 // BaseConfig gets the base config from config
-func (welreceiver) BaseConfig(cfg component.Config) adapter.BaseConfig {
+func (batch) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(Config)
 	var operators []operator.Config
 	operators = append(operators, createSetSourceOperator())
@@ -66,12 +71,23 @@ func createSetSourceOperator() operator.Config {
 	return operator.NewConfig(c)
 }
 
-func (t welreceiver) InputConfig(config component.Config) operator.Config {
+func (t batch) InputConfig(config component.Config) operator.Config {
 	rcfg := config.(Config)
-	oc := windows.NewConfig()
-	parsed, _ := stanza.ParseName(rcfg.Input.Configuration.Stanza.Name)
-	oc.Channel = parsed.Target
-	oc.Attributes = map[string]helper.ExprStringConfig{}
+	oc := file.NewConfig()
+	oc.DeleteAfterRead = true
+	path, err := script.DetermineCommandName(rcfg.BaseDir, rcfg.Input)
+	if err != nil {
+		t.logger.Error("error reading command", zap.Error(err))
+		return operator.NewConfig(oc)
+	}
+	allowlist := path
+	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil {
+		allowlist = filepath.Join(path, w.Value)
+	}
+	oc.Include = []string{allowlist}
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil {
+		oc.Exclude = []string{filepath.Join(path, b.Value)}
+	}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.
 		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
@@ -87,6 +103,17 @@ func (t welreceiver) InputConfig(config component.Config) operator.Config {
 
 	if sourceParam := rcfg.Input.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
 		oc.Attributes["source"] = helper.ExprStringConfig(sourceParam.Value)
+	}
+
+	oc.IncludeFilePath = true
+	oc.Encoding = "utf-8"
+	oc.StartAt = "beginning"
+	oc.SplitConfig = split.Config{
+		LineStartPattern: "^",
+	}
+	oc.TrimConfig = trim.Config{
+		PreserveLeading:  true,
+		PreserveTrailing: true,
 	}
 
 	return operator.NewConfig(oc)

@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 
@@ -29,15 +28,17 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/internal/receiver/batchreceiver"
 	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
 	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
 	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
 	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
 	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
+	"github.com/splunk/tarunner/internal/stanza"
 )
 
 // CreateReceivers builds a logs receiver for every enabled input stanza,
-// dispatching by the stanza name's URL scheme. Stanzas with disabled=1 are
+// dispatching by the stanza name's input kind. Stanzas with disabled=1 are
 // skipped.
 func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, telemetrySettings component.TelemetrySettings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
@@ -57,14 +58,22 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 
 // CreateReceiver builds a single logs receiver for an input stanza.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
+	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
 	}
-	switch parsed.Scheme {
+	switch parsed.Kind {
 	case "script", "":
 		f := scriptreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), &scriptreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), &scriptreceiver.Config{
+			Input:      input,
+			BaseDir:    baseDir,
+			Transforms: transforms,
+			Props:      props,
+		}, next)
+	case "batch":
+		f := batchreceiver.NewFactory()
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), &scriptreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -72,15 +81,15 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "monitor":
 		f := monitorreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), monitorreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), monitorreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
 			Props:      props,
 		}, next)
-	case "WinEventLog":
+	case "wineventlog":
 		f := wineventlogreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), wineventlogreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), wineventlogreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -88,7 +97,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "tcp":
 		f := tcpreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), tcpreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), tcpreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -96,14 +105,14 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "udp":
 		f := udpreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Path, telemetrySettings), udpreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), udpreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
 			Props:      props,
 		}, next)
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Scheme)
+		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
 	}
 }
 

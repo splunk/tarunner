@@ -5,29 +5,28 @@ package script
 
 import (
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/internal/stanza"
 )
 
 func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
-	if strings.HasPrefix(input.Configuration.Stanza.Name, "monitor://") {
-		return strings.TrimPrefix(input.Configuration.Stanza.Name, "monitor://"), nil
-	}
-	parsed, err := url.Parse(input.Configuration.Stanza.Name)
+	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
 		return "", err
 	}
-	switch parsed.Scheme {
+	switch parsed.Kind {
+	case "monitor", "batch":
+		return parsed.Target, nil
 	case "script":
-		return GetPath(baseDir, filepath.Join(parsed.Host, parsed.Path))
+		return GetPath(baseDir, parsed.Target)
 	case "":
-		return GetPath(baseDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), input.Configuration.Stanza.Name))
+		return GetPath(baseDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), parsed.Target))
 	default:
-		return "", fmt.Errorf("unknown scheme %q", parsed.Scheme)
+		return "", fmt.Errorf("unknown scheme %q", parsed.Kind)
 	}
 }
 
