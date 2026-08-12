@@ -39,7 +39,7 @@ func createLogsFunc(_ context.Context, settings exporter.Settings, config compon
 
 	output, err := tabuilder.ReadOutputs(baseDir)
 	if err != nil {
-		return nil, fmt.Errorf("splunk_outputs: failed to read outputs.conf from %q: %w", baseDir, err)
+		return nil, fmt.Errorf("splunk_outputs: %w (base_dir: %s)", err, baseDir)
 	}
 
 	exp, err := tabuilder.CreateExporter(output, settings.Logger, settings.TelemetrySettings)
