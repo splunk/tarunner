@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package tabuilder reads a technical addon's configuration files and builds
-// the per-input logs receivers. It is the single source of truth for the input
-// stanza -> receiver mapping, shared by the standalone collector runner
-// (internal/collector) and the ta receiver (pkg/tareceiver).
+// the per-input logs receivers and per-output logs exporters. It is the single
+// source of truth for the stanza -> component mapping, shared by the standalone
+// collector runner (internal/collector) and the OTel plugins
+// (pkg/splunkinputsreceiver, pkg/splunkoutputsexporter).
 package tabuilder
 
 import (
@@ -14,8 +15,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configopaque"
+	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/exporter"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
+	"go.uber.org/zap"
+
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/splunk/tarunner/internal/conf"
@@ -162,4 +171,49 @@ func ReadProps(baseDir string) ([]conf.Prop, error) {
 		return nil, err
 	}
 	return conf.ReadProps(b)
+}
+
+// ReadOutputs reads outputs.conf from baseDir, preferring local/ over default/.
+// Returns the [httpout] stanza, or nil if no [httpout] stanza is present.
+func ReadOutputs(baseDir string) (*conf.Output, error) {
+	fileToRead := filepath.Join(baseDir, "local", "outputs.conf")
+	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+		fileToRead = filepath.Join(baseDir, "default", "outputs.conf")
+		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+	b, err := os.ReadFile(fileToRead)
+	if err != nil {
+		return nil, err
+	}
+	return conf.ReadOutputs(b)
+}
+
+// CreateExporter builds a logs exporter from the [httpout] stanza.
+func CreateExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+	return newHECExporter(output, logger, telemetrySettings)
+}
+
+func newHECExporter(o *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+	f := splunkhecexporter.NewFactory()
+	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
+	cfg.Endpoint = o.URI
+	cfg.Token = configopaque.String(o.Token)
+	cfg.TLS = configtls.ClientConfig{InsecureSkipVerify: true} // TODO: wire sslVerifyServerCert from outputs.conf
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	s := exporter.Settings{
+		ID: component.MustNewID(f.Type().String()),
+		TelemetrySettings: component.TelemetrySettings{
+			Logger:         logger,
+			TracerProvider: tracenoop.NewTracerProvider(),
+			MeterProvider:  metricnoop.NewMeterProvider(),
+		},
+	}
+	if telemetrySettings.Logger != nil {
+		s.TelemetrySettings = telemetrySettings
+	}
+	return f.CreateLogs(context.Background(), s, cfg)
 }
