@@ -129,107 +129,37 @@ func settings(f receiver.Factory, path string, telemetrySettings component.Telem
 	}
 }
 
-// ReadInputs discovers and merges inputs.conf files from splunkHome using
-// standard Splunk precedence (lowest to highest):
+// confFilePaths returns the ordered list of paths for a given .conf filename
+// across splunkHome, from lowest to highest precedence:
 //
-//  1. etc/apps/*/default/inputs.conf  (sorted by app name)
-//  2. etc/apps/*/local/inputs.conf    (sorted by app name)
-//
-// Stanzas are merged by name; local/ wins over default/ for the same app,
-// and later apps (alphabetically) win over earlier ones within the same tier.
-// Relative script paths are resolved to absolute paths at read time.
-func ReadInputs(splunkHome string) ([]conf.Input, error) {
-	etcApps := filepath.Join(splunkHome, "etc", "apps")
+//  1. etc/system/default/<filename>
+//  2. etc/apps/*/default/<filename>  (sorted by app name)
+//  3. etc/apps/*/local/<filename>    (sorted by app name)
+//  4. etc/system/local/<filename>
+func confFilePaths(splunkHome, filename string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	var paths []string
 
-	appDefaults, _ := filepath.Glob(filepath.Join(etcApps, "*", "default", "inputs.conf"))
+	paths = append(paths, filepath.Join(etcDir, "system", "default", filename))
+
+	appDefaults, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "default", filename))
 	sort.Strings(appDefaults)
-	appLocals, _ := filepath.Glob(filepath.Join(etcApps, "*", "local", "inputs.conf"))
+	paths = append(paths, appDefaults...)
+
+	appLocals, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "local", filename))
 	sort.Strings(appLocals)
+	paths = append(paths, appLocals...)
 
-	var layers [][]conf.Input
-	for _, path := range append(appDefaults, appLocals...) {
-		appDir := filepath.Dir(filepath.Dir(path)) // strip /default or /local
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		inputs, err := conf.ReadInput(b, appDir)
-		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", path, err)
-		}
-		layers = append(layers, inputs)
-	}
+	paths = append(paths, filepath.Join(etcDir, "system", "local", filename))
 
-	return conf.MergeInputs(layers), nil
+	return paths
 }
 
-// ReadTransforms discovers and merges transforms.conf files from splunkHome
-// using standard Splunk precedence. Returns nil (no error) when absent.
-func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
-	etcApps := filepath.Join(splunkHome, "etc", "apps")
-
-	appDefaults, _ := filepath.Glob(filepath.Join(etcApps, "*", "default", "transforms.conf"))
-	sort.Strings(appDefaults)
-	appLocals, _ := filepath.Glob(filepath.Join(etcApps, "*", "local", "transforms.conf"))
-	sort.Strings(appLocals)
-
-	var layers [][]conf.Transform
-	for _, path := range append(appDefaults, appLocals...) {
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		transforms, err := conf.ReadTransforms(b)
-		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", path, err)
-		}
-		layers = append(layers, transforms)
-	}
-
-	return conf.MergeTransforms(layers), nil
-}
-
-// ReadProps discovers and merges props.conf files from splunkHome using
-// standard Splunk precedence. Returns nil (no error) when absent.
-func ReadProps(splunkHome string) ([]conf.Prop, error) {
-	etcApps := filepath.Join(splunkHome, "etc", "apps")
-
-	appDefaults, _ := filepath.Glob(filepath.Join(etcApps, "*", "default", "props.conf"))
-	sort.Strings(appDefaults)
-	appLocals, _ := filepath.Glob(filepath.Join(etcApps, "*", "local", "props.conf"))
-	sort.Strings(appLocals)
-
-	var layers [][]conf.Prop
-	for _, path := range append(appDefaults, appLocals...) {
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		props, err := conf.ReadProps(b)
-		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", path, err)
-		}
-		layers = append(layers, props)
-	}
-
-	return conf.MergeProps(layers), nil
-}
-
-// ReadOutputs discovers and merges outputs.conf files from splunkHome using
-// standard Splunk precedence (lowest to highest):
-//
-//  1. etc/system/default/outputs.conf
-//  2. etc/apps/*/default/outputs.conf  (sorted by app name)
-//  3. etc/apps/*/local/outputs.conf    (sorted by app name)
-//  4. etc/system/local/outputs.conf
-//
-// Returns the merged stanza -> key -> value map. Callers use HTTPOut (or
-// future TCPOut, SyslogOut, etc.) to extract a specific output type.
-func ReadOutputs(splunkHome string) (map[string]map[string]string, error) {
-	candidates := outputsConfPaths(splunkHome)
-
-	var layers []map[string]map[string]string
-	for _, path := range candidates {
+// readConfFiles reads and skips missing files from a list of paths, returning
+// raw payloads in order.
+func readConfFiles(paths []string) ([][]byte, error) {
+	var payloads [][]byte
+	for _, path := range paths {
 		b, err := os.ReadFile(path)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -237,51 +167,99 @@ func ReadOutputs(splunkHome string) (map[string]map[string]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		parsed, err := conf.ParseConf(b)
+		payloads = append(payloads, b)
+	}
+	return payloads, nil
+}
+
+// ReadInputs discovers and merges inputs.conf files from splunkHome using
+// standard Splunk precedence. Relative script paths are resolved to absolute
+// paths at read time.
+func ReadInputs(splunkHome string) ([]conf.Input, error) {
+	var layers [][]conf.Input
+	for _, path := range confFilePaths(splunkHome, "inputs.conf") {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		appDir := filepath.Dir(filepath.Dir(path)) // strip /default or /local
+		inputs, err := conf.ReadInput(b, appDir)
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", path, err)
 		}
+		layers = append(layers, inputs)
+	}
+	return conf.MergeInputs(layers), nil
+}
+
+// ReadTransforms discovers and merges transforms.conf files from splunkHome
+// using standard Splunk precedence. Returns nil (no error) when absent.
+func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
+	payloads, err := readConfFiles(confFilePaths(splunkHome, "transforms.conf"))
+	if err != nil {
+		return nil, err
+	}
+	var layers [][]conf.Transform
+	for _, b := range payloads {
+		transforms, err := conf.ReadTransforms(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, transforms)
+	}
+	return conf.MergeTransforms(layers), nil
+}
+
+// ReadProps discovers and merges props.conf files from splunkHome using
+// standard Splunk precedence. Returns nil (no error) when absent.
+func ReadProps(splunkHome string) ([]conf.Prop, error) {
+	payloads, err := readConfFiles(confFilePaths(splunkHome, "props.conf"))
+	if err != nil {
+		return nil, err
+	}
+	var layers [][]conf.Prop
+	for _, b := range payloads {
+		props, err := conf.ReadProps(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, props)
+	}
+	return conf.MergeProps(layers), nil
+}
+
+// ReadOutputs discovers and merges outputs.conf files from splunkHome using
+// standard Splunk precedence. Returns the merged ConfMap. Callers use HTTPOut
+// (or future TCPOut, SyslogOut, etc.) to extract a specific output type.
+func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
+	payloads, err := readConfFiles(confFilePaths(splunkHome, "outputs.conf"))
+	if err != nil {
+		return nil, err
+	}
+	var layers []conf.ConfMap
+	for _, b := range payloads {
+		parsed, err := conf.ParseConf(b)
+		if err != nil {
+			return nil, err
+		}
 		layers = append(layers, parsed)
 	}
-
 	return conf.MergeConf(layers), nil
 }
 
 // HTTPOut extracts the [httpout] stanza from a merged outputs conf map.
 // Returns conf.ErrNoHTTPOut if no [httpout] stanza is present.
-func HTTPOut(merged map[string]map[string]string) (*conf.Output, error) {
+func HTTPOut(merged conf.ConfMap) (*conf.Output, error) {
 	return conf.HTTPOut(merged)
-}
-
-// outputsConfPaths returns the ordered list of outputs.conf paths to consider,
-// from lowest to highest precedence.
-func outputsConfPaths(splunkHome string) []string {
-	etcDir := filepath.Join(splunkHome, "etc")
-	var paths []string
-
-	// 1. system default
-	paths = append(paths, filepath.Join(etcDir, "system", "default", "outputs.conf"))
-
-	// 2. app defaults (sorted by app name)
-	appDefaults, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "default", "outputs.conf"))
-	sort.Strings(appDefaults)
-	paths = append(paths, appDefaults...)
-
-	// 3. app locals (sorted by app name)
-	appLocals, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "local", "outputs.conf"))
-	sort.Strings(appLocals)
-	paths = append(paths, appLocals...)
-
-	// 4. system local (highest precedence)
-	paths = append(paths, filepath.Join(etcDir, "system", "local", "outputs.conf"))
-
-	return paths
 }
 
 // CreateExporter builds a logs exporter from a merged outputs conf map.
 // It extracts [httpout] and builds a HEC exporter. Future output types
 // (tcpout, syslog, etc.) will be added here as additional cases.
-func CreateExporter(merged map[string]map[string]string, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	output, err := conf.HTTPOut(merged)
 	if err != nil {
 		return nil, err
