@@ -11,11 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestReadOutputs(t *testing.T) {
+func TestParseConfAndHTTPOut(t *testing.T) {
 	payload, err := os.ReadFile("testdata/outputs.conf")
 	require.NoError(t, err)
 
-	output, err := ReadOutputs(payload)
+	parsed, err := ParseConf(payload)
+	require.NoError(t, err)
+
+	output, err := HTTPOut(parsed)
 	require.NoError(t, err)
 	require.NotNil(t, output)
 
@@ -23,7 +26,25 @@ func TestReadOutputs(t *testing.T) {
 	assert.Equal(t, "https://splunk:8088/services/collector/event", output.URI)
 }
 
-func TestReadOutputsNoHTTPOut(t *testing.T) {
-	_, err := ReadOutputs([]byte("[tcpout]\nserver = splunk:9997\n"))
+func TestHTTPOutMissing(t *testing.T) {
+	parsed, err := ParseConf([]byte("[tcpout]\nserver = splunk:9997\n"))
+	require.NoError(t, err)
+	_, err = HTTPOut(parsed)
 	require.ErrorIs(t, err, ErrNoHTTPOut)
+}
+
+func TestMergeConf(t *testing.T) {
+	base, err := ParseConf([]byte("[httpout]\nhttpEventCollectorToken = base-token\nuri = https://base:8088/services/collector/event\n"))
+	require.NoError(t, err)
+
+	override, err := ParseConf([]byte("[httpout]\nhttpEventCollectorToken = override-token\n"))
+	require.NoError(t, err)
+
+	merged := MergeConf([]map[string]map[string]string{base, override})
+	output, err := HTTPOut(merged)
+	require.NoError(t, err)
+
+	// override wins for token, base value kept for uri
+	assert.Equal(t, "override-token", output.Token)
+	assert.Equal(t, "https://base:8088/services/collector/event", output.URI)
 }

@@ -5,7 +5,8 @@ package splunkoutputsexporter
 
 // Config holds the configuration for the splunk_outputs exporter.
 type Config struct {
-	// BaseDir is the directory containing local/ or default/ subdirectories
-	// with outputs.conf. Defaults to $SPLUNK_HOME if empty.
-	BaseDir string `mapstructure:"path"`
+	// BaseDir is the Splunk installation root. outputs.conf is discovered
+	// across etc/system/default, etc/apps/*, and etc/system/local using
+	// standard Splunk precedence. Overrides $SPLUNK_HOME when set.
+	BaseDir string `mapstructure:"base_dir"`
 }
