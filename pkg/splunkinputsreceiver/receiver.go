@@ -6,6 +6,8 @@ package splunkinputsreceiver
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -56,21 +58,28 @@ func packReceivers(receivers []receiver.Logs) receiver.Logs {
 
 func createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
-	baseDir := cfg.BaseDir
-	inputs, err := tabuilder.ReadInputs(baseDir)
+	splunkHome := cfg.BaseDir
+	if splunkHome == "" {
+		splunkHome = os.Getenv("SPLUNK_HOME")
+	}
+	if splunkHome == "" {
+		return nil, fmt.Errorf("splunk_inputs: base_dir is not set and SPLUNK_HOME is not defined")
+	}
+
+	inputs, err := tabuilder.ReadInputs(splunkHome)
 	if err != nil {
 		return nil, err
 	}
-	transforms, err := tabuilder.ReadTransforms(baseDir)
+	transforms, err := tabuilder.ReadTransforms(splunkHome)
 	if err != nil {
 		return nil, err
 	}
-	props, err := tabuilder.ReadProps(baseDir)
+	props, err := tabuilder.ReadProps(splunkHome)
 	if err != nil {
 		return nil, err
 	}
 
-	receivers, err := tabuilder.CreateReceivers(ctx, inputs, transforms, props, baseDir, logs, settings.TelemetrySettings)
+	receivers, err := tabuilder.CreateReceivers(ctx, inputs, transforms, props, splunkHome, logs, settings.TelemetrySettings)
 	if err != nil {
 		return nil, err
 	}

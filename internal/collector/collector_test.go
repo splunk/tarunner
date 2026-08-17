@@ -37,7 +37,7 @@ func TestRunTA(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "ta"), &config.Config{
+	cancel, err := Run(filepath.Join("testdata", "ta_home"), &config.Config{
 		Type:     "otlp_http",
 		Endpoint: "http://localhost:1337",
 	})
@@ -60,7 +60,7 @@ func TestRunPeriodic(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "periodic"), &config.Config{
+	cancel, err := Run(filepath.Join("testdata", "periodic_home"), &config.Config{
 		Type:     "otlp_http",
 		Endpoint: "http://localhost:1338",
 	})
@@ -101,7 +101,7 @@ func TestRunDisabled(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "disabled"), &config.Config{
+	cancel, err := Run(filepath.Join("testdata", "disabled_home"), &config.Config{
 		Type:     "otlp_http",
 		Endpoint: "http://localhost:1339",
 	})
@@ -123,7 +123,7 @@ func TestRunDisabledInterval(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "disabled_interval"), &config.Config{
+	cancel, err := Run(filepath.Join("testdata", "disabled_interval_home"), &config.Config{
 		Type:     "otlp_http",
 		Endpoint: "http://localhost:1340",
 	})
@@ -144,7 +144,7 @@ func TestRunScriptedInputs(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "script"), &config.Config{
+	cancel, err := Run(filepath.Join("testdata", "script_home"), &config.Config{
 		Type:     "otlp_http",
 		Endpoint: "http://localhost:1341",
 	})
@@ -157,7 +157,7 @@ func TestRunScriptedInputs(t *testing.T) {
 }
 
 func TestUseTCP(t *testing.T) {
-	rootDir := filepath.Join("testdata", "tcp")
+	rootDir := filepath.Join("testdata", "tcp_home")
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.Protocols.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1342"
@@ -190,7 +190,7 @@ func TestUseTCP(t *testing.T) {
 }
 
 func TestUseUDP(t *testing.T) {
-	rootDir := filepath.Join("testdata", "udp")
+	rootDir := filepath.Join("testdata", "udp_home")
 	logsSink := &consumertest.LogsSink{}
 	cfg := otlpreceiver.NewFactory().CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.Protocols.HTTP.GetOrInsertDefault().ServerConfig.NetAddr.Endpoint = "localhost:1343"
@@ -232,7 +232,7 @@ func TestRunScriptedInputsWithHEC(t *testing.T) {
 	defer func() {
 		_ = rcvr.Shutdown(context.Background())
 	}()
-	cancel, err := Run(filepath.Join("testdata", "script"), &config.Config{
+	cancel, err := Run(filepath.Join("testdata", "script_home"), &config.Config{
 		Endpoint: "http://localhost:1341",
 		Token:    "foo",
 	})

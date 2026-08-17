@@ -15,7 +15,7 @@ import (
 func TestOneInput(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("testdata", "oneinput.conf"))
 	require.NoError(t, err)
-	res, err := ReadInput(b)
+	res, err := ReadInput(b, "")
 	require.NoError(t, err)
 	assert.Equal(
 		t,
@@ -50,7 +50,7 @@ func TestOneInput(t *testing.T) {
 func TestTwoInputs(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("testdata", "twoinputs.conf"))
 	require.NoError(t, err)
-	res, err := ReadInput(b)
+	res, err := ReadInput(b, "")
 	require.NoError(t, err)
 	assert.Equal(t, []Input{{
 		ServerHost:    "",
@@ -133,7 +133,7 @@ func TestToXML(t *testing.T) {
 </Input>`
 	b, err := os.ReadFile(filepath.Join("testdata", "oneinput.conf"))
 	require.NoError(t, err)
-	res, err := ReadInput(b)
+	res, err := ReadInput(b, "")
 	require.NoError(t, err)
 	assert.Len(t, res, 1)
 	res[0].ServerHost = "773c28971b2a"

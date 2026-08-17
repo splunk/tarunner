@@ -39,8 +39,8 @@ import (
 )
 
 // CreateReceivers builds a logs receiver for every enabled input stanza,
-// dispatching by the stanza name's input kind. Stanzas with disabled=1 are
-// skipped.
+// dispatching by the stanza name's input kind. Stanzas with disabled=1 or
+// unsupported kinds are skipped silently.
 func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, telemetrySettings component.TelemetrySettings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
@@ -52,12 +52,16 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 		if err != nil {
 			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
 		}
+		if l == nil {
+			continue
+		}
 		receivers = append(receivers, l)
 	}
 	return receivers, nil
 }
 
 // CreateReceiver builds a single logs receiver for an input stanza.
+// Returns nil (no error) for unsupported input kinds.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
@@ -113,7 +117,8 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 			Props:      props,
 		}, next)
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
+		// unsupported kind — skip silently
+		return nil, nil
 	}
 }
 
@@ -124,54 +129,90 @@ func settings(f receiver.Factory, path string, telemetrySettings component.Telem
 	}
 }
 
-// ReadInputs reads inputs.conf, preferring local/ over default/.
-func ReadInputs(baseDir string) ([]conf.Input, error) {
-	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "inputs.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+// ReadInputs discovers and merges inputs.conf files from splunkHome using
+// standard Splunk precedence (lowest to highest):
+//
+//  1. etc/apps/*/default/inputs.conf  (sorted by app name)
+//  2. etc/apps/*/local/inputs.conf    (sorted by app name)
+//
+// Stanzas are merged by name; local/ wins over default/ for the same app,
+// and later apps (alphabetically) win over earlier ones within the same tier.
+// Relative script paths are resolved to absolute paths at read time.
+func ReadInputs(splunkHome string) ([]conf.Input, error) {
+	etcApps := filepath.Join(splunkHome, "etc", "apps")
+
+	appDefaults, _ := filepath.Glob(filepath.Join(etcApps, "*", "default", "inputs.conf"))
+	sort.Strings(appDefaults)
+	appLocals, _ := filepath.Glob(filepath.Join(etcApps, "*", "local", "inputs.conf"))
+	sort.Strings(appLocals)
+
+	var layers [][]conf.Input
+	for _, path := range append(appDefaults, appLocals...) {
+		appDir := filepath.Dir(filepath.Dir(path)) // strip /default or /local
+		b, err := os.ReadFile(path)
+		if err != nil {
 			return nil, err
 		}
+		inputs, err := conf.ReadInput(b, appDir)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
+		layers = append(layers, inputs)
 	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadInput(b)
+
+	return conf.MergeInputs(layers), nil
 }
 
-// ReadTransforms reads transforms.conf, preferring local/ over default/. It
-// returns a nil slice (and no error) when the file is absent.
-func ReadTransforms(baseDir string) ([]conf.Transform, error) {
-	fileToRead := filepath.Join(baseDir, "local", "transforms.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "transforms.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, nil
+// ReadTransforms discovers and merges transforms.conf files from splunkHome
+// using standard Splunk precedence. Returns nil (no error) when absent.
+func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
+	etcApps := filepath.Join(splunkHome, "etc", "apps")
+
+	appDefaults, _ := filepath.Glob(filepath.Join(etcApps, "*", "default", "transforms.conf"))
+	sort.Strings(appDefaults)
+	appLocals, _ := filepath.Glob(filepath.Join(etcApps, "*", "local", "transforms.conf"))
+	sort.Strings(appLocals)
+
+	var layers [][]conf.Transform
+	for _, path := range append(appDefaults, appLocals...) {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
 		}
+		transforms, err := conf.ReadTransforms(b)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
+		layers = append(layers, transforms)
 	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadTransforms(b)
+
+	return conf.MergeTransforms(layers), nil
 }
 
-// ReadProps reads props.conf, preferring local/ over default/. It returns a nil
-// slice (and no error) when the file is absent.
-func ReadProps(baseDir string) ([]conf.Prop, error) {
-	fileToRead := filepath.Join(baseDir, "local", "props.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "props.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, nil
+// ReadProps discovers and merges props.conf files from splunkHome using
+// standard Splunk precedence. Returns nil (no error) when absent.
+func ReadProps(splunkHome string) ([]conf.Prop, error) {
+	etcApps := filepath.Join(splunkHome, "etc", "apps")
+
+	appDefaults, _ := filepath.Glob(filepath.Join(etcApps, "*", "default", "props.conf"))
+	sort.Strings(appDefaults)
+	appLocals, _ := filepath.Glob(filepath.Join(etcApps, "*", "local", "props.conf"))
+	sort.Strings(appLocals)
+
+	var layers [][]conf.Prop
+	for _, path := range append(appDefaults, appLocals...) {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
 		}
+		props, err := conf.ReadProps(b)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
+		layers = append(layers, props)
 	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadProps(b)
+
+	return conf.MergeProps(layers), nil
 }
 
 // ReadOutputs discovers and merges outputs.conf files from splunkHome using
