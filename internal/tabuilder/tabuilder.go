@@ -124,6 +124,49 @@ func settings(f receiver.Factory, path string, telemetrySettings component.Telem
 	}
 }
 
+// confFilePaths returns the ordered list of paths for a given .conf filename
+// across splunkHome, from lowest to highest precedence:
+//
+//  1. etc/system/default/<filename>
+//  2. etc/apps/*/default/<filename>  (sorted by app name)
+//  3. etc/apps/*/local/<filename>    (sorted by app name)
+//  4. etc/system/local/<filename>
+func confFilePaths(splunkHome, filename string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	var paths []string
+
+	paths = append(paths, filepath.Join(etcDir, "system", "default", filename))
+
+	appDefaults, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "default", filename))
+	sort.Strings(appDefaults)
+	paths = append(paths, appDefaults...)
+
+	appLocals, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "local", filename))
+	sort.Strings(appLocals)
+	paths = append(paths, appLocals...)
+
+	paths = append(paths, filepath.Join(etcDir, "system", "local", filename))
+
+	return paths
+}
+
+// readConfFiles reads and skips missing files from a list of paths, returning
+// raw payloads in order.
+func readConfFiles(paths []string) ([][]byte, error) {
+	var payloads [][]byte
+	for _, path := range paths {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		payloads = append(payloads, b)
+	}
+	return payloads, nil
+}
+
 // ReadInputs reads inputs.conf, preferring local/ over default/.
 func ReadInputs(baseDir string) ([]conf.Input, error) {
 	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
@@ -175,72 +218,34 @@ func ReadProps(baseDir string) ([]conf.Prop, error) {
 }
 
 // ReadOutputs discovers and merges outputs.conf files from splunkHome using
-// standard Splunk precedence (lowest to highest):
-//
-//  1. etc/system/default/outputs.conf
-//  2. etc/apps/*/default/outputs.conf  (sorted by app name)
-//  3. etc/apps/*/local/outputs.conf    (sorted by app name)
-//  4. etc/system/local/outputs.conf
-//
-// Returns the merged stanza -> key -> value map. Callers use HTTPOut (or
-// future TCPOut, SyslogOut, etc.) to extract a specific output type.
-func ReadOutputs(splunkHome string) (map[string]map[string]string, error) {
-	candidates := outputsConfPaths(splunkHome)
-
-	var layers []map[string]map[string]string
-	for _, path := range candidates {
-		b, err := os.ReadFile(path)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
+// standard Splunk precedence. Returns the merged ConfMap. Callers use HTTPOut
+// (or future TCPOut, SyslogOut, etc.) to extract a specific output type.
+func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
+	payloads, err := readConfFiles(confFilePaths(splunkHome, "outputs.conf"))
+	if err != nil {
+		return nil, err
+	}
+	var layers []conf.ConfMap
+	for _, b := range payloads {
+		parsed, err := conf.ParseConf(b)
 		if err != nil {
 			return nil, err
 		}
-		parsed, err := conf.ParseConf(b)
-		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", path, err)
-		}
 		layers = append(layers, parsed)
 	}
-
 	return conf.MergeConf(layers), nil
 }
 
 // HTTPOut extracts the [httpout] stanza from a merged outputs conf map.
 // Returns conf.ErrNoHTTPOut if no [httpout] stanza is present.
-func HTTPOut(merged map[string]map[string]string) (*conf.Output, error) {
+func HTTPOut(merged conf.ConfMap) (*conf.Output, error) {
 	return conf.HTTPOut(merged)
-}
-
-// outputsConfPaths returns the ordered list of outputs.conf paths to consider,
-// from lowest to highest precedence.
-func outputsConfPaths(splunkHome string) []string {
-	etcDir := filepath.Join(splunkHome, "etc")
-	var paths []string
-
-	// 1. system default
-	paths = append(paths, filepath.Join(etcDir, "system", "default", "outputs.conf"))
-
-	// 2. app defaults (sorted by app name)
-	appDefaults, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "default", "outputs.conf"))
-	sort.Strings(appDefaults)
-	paths = append(paths, appDefaults...)
-
-	// 3. app locals (sorted by app name)
-	appLocals, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "local", "outputs.conf"))
-	sort.Strings(appLocals)
-	paths = append(paths, appLocals...)
-
-	// 4. system local (highest precedence)
-	paths = append(paths, filepath.Join(etcDir, "system", "local", "outputs.conf"))
-
-	return paths
 }
 
 // CreateExporter builds a logs exporter from a merged outputs conf map.
 // It extracts [httpout] and builds a HEC exporter. Future output types
 // (tcpout, syslog, etc.) will be added here as additional cases.
-func CreateExporter(merged map[string]map[string]string, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	output, err := conf.HTTPOut(merged)
 	if err != nil {
 		return nil, err

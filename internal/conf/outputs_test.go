@@ -40,7 +40,7 @@ func TestMergeConf(t *testing.T) {
 	override, err := ParseConf([]byte("[httpout]\nhttpEventCollectorToken = override-token\n"))
 	require.NoError(t, err)
 
-	merged := MergeConf([]map[string]map[string]string{base, override})
+	merged := MergeConf([]ConfMap{base, override})
 	output, err := HTTPOut(merged)
 	require.NoError(t, err)
 
