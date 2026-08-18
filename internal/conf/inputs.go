@@ -114,11 +114,7 @@ func resolveInputPath(name, appDir string) string {
 }
 
 func hasScheme(name, scheme string) bool {
-	prefix := scheme + "://"
-	if len(name) < len(prefix) {
-		return false
-	}
-	return strings.EqualFold(name[:len(prefix)], prefix)
+	return strings.HasPrefix(strings.ToLower(name), scheme+"://")
 }
 
 func absPath(appDir, rel string) string {
