@@ -24,8 +24,6 @@ type Output struct {
 	// Both require configuring BatcherConfig on the exporter helper.
 }
 
-// ParseConf parses a single outputs.conf payload into a generic
-// stanza -> key -> value map. All stanza names and keys are lower-cased.
 // ParseConf parses a single .conf payload into a ConfMap.
 func ParseConf(payload []byte) (ConfMap, error) {
 	f, err := ini.Load(payload)

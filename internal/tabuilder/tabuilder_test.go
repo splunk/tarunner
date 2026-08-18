@@ -41,6 +41,12 @@ func TestReadOutputs(t *testing.T) {
 			expectedURI:   "https://system-local:8088/services/collector/event",
 		},
 		{
+			name:          "app_local_wins_over_app_default",
+			splunkHome:    filepath.Join(rootDir, "app_local_wins_over_app_default"),
+			expectedToken: "token-app-local",
+			expectedURI:   "https://app-local:8088/services/collector/event",
+		},
+		{
 			name:        "no_httpout",
 			splunkHome:  filepath.Join(rootDir, "no_httpout"),
 			expectedErr: conf.ErrNoHTTPOut,
