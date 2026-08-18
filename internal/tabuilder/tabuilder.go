@@ -158,6 +158,7 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
+// ReadInputs reads inputs.conf, preferring local/ over default/.
 func ReadInputs(baseDir string) ([]conf.Input, error) {
 	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
