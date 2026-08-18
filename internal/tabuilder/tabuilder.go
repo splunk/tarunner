@@ -38,6 +38,9 @@ import (
 	"github.com/splunk/tarunner/internal/stanza"
 )
 
+// CreateReceivers builds a logs receiver for every enabled input stanza,
+// dispatching by the stanza name's input kind. Stanzas with disabled=1 are
+// skipped.
 func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, telemetrySettings component.TelemetrySettings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
@@ -54,6 +57,7 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 	return receivers, nil
 }
 
+// CreateReceiver builds a single logs receiver for an input stanza.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
@@ -169,6 +173,8 @@ func ReadInputs(baseDir string) ([]conf.Input, error) {
 	return conf.ReadInput(b)
 }
 
+// ReadTransforms reads transforms.conf, preferring local/ over default/. It
+// returns a nil slice (and no error) when the file is absent.
 func ReadTransforms(baseDir string) ([]conf.Transform, error) {
 	fileToRead := filepath.Join(baseDir, "local", "transforms.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
@@ -184,6 +190,8 @@ func ReadTransforms(baseDir string) ([]conf.Transform, error) {
 	return conf.ReadTransforms(b)
 }
 
+// ReadProps reads props.conf, preferring local/ over default/. It returns a nil
+// slice (and no error) when the file is absent.
 func ReadProps(baseDir string) ([]conf.Prop, error) {
 	fileToRead := filepath.Join(baseDir, "local", "props.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
