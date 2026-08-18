@@ -38,9 +38,6 @@ import (
 	"github.com/splunk/tarunner/internal/stanza"
 )
 
-// CreateReceivers builds a logs receiver for every enabled input stanza,
-// dispatching by the stanza name's input kind. Stanzas with disabled=1 are
-// skipped.
 func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, telemetrySettings component.TelemetrySettings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
@@ -57,7 +54,6 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 	return receivers, nil
 }
 
-// CreateReceiver builds a single logs receiver for an input stanza.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
@@ -124,13 +120,6 @@ func settings(f receiver.Factory, path string, telemetrySettings component.Telem
 	}
 }
 
-// confFilePaths returns the ordered list of paths for a given .conf filename
-// across splunkHome, from lowest to highest precedence:
-//
-//  1. etc/system/default/<filename>
-//  2. etc/apps/*/default/<filename>  (sorted by app name)
-//  3. etc/apps/*/local/<filename>    (sorted by app name)
-//  4. etc/system/local/<filename>
 func confFilePaths(splunkHome, filename string) []string {
 	etcDir := filepath.Join(splunkHome, "etc")
 	var paths []string
@@ -150,8 +139,6 @@ func confFilePaths(splunkHome, filename string) []string {
 	return paths
 }
 
-// readConfFiles reads and skips missing files from a list of paths, returning
-// raw payloads in order.
 func readConfFiles(paths []string) ([][]byte, error) {
 	var payloads [][]byte
 	for _, path := range paths {
@@ -167,7 +154,6 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ReadInputs reads inputs.conf, preferring local/ over default/.
 func ReadInputs(baseDir string) ([]conf.Input, error) {
 	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
@@ -183,8 +169,6 @@ func ReadInputs(baseDir string) ([]conf.Input, error) {
 	return conf.ReadInput(b)
 }
 
-// ReadTransforms reads transforms.conf, preferring local/ over default/. It
-// returns a nil slice (and no error) when the file is absent.
 func ReadTransforms(baseDir string) ([]conf.Transform, error) {
 	fileToRead := filepath.Join(baseDir, "local", "transforms.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
@@ -200,8 +184,6 @@ func ReadTransforms(baseDir string) ([]conf.Transform, error) {
 	return conf.ReadTransforms(b)
 }
 
-// ReadProps reads props.conf, preferring local/ over default/. It returns a nil
-// slice (and no error) when the file is absent.
 func ReadProps(baseDir string) ([]conf.Prop, error) {
 	fileToRead := filepath.Join(baseDir, "local", "props.conf")
 	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
@@ -217,9 +199,8 @@ func ReadProps(baseDir string) ([]conf.Prop, error) {
 	return conf.ReadProps(b)
 }
 
-// ReadOutputs discovers and merges outputs.conf files from splunkHome using
-// standard Splunk precedence. Returns the merged ConfMap. Callers use HTTPOut
-// (or future TCPOut, SyslogOut, etc.) to extract a specific output type.
+// ReadOutputs merges outputs.conf across $SPLUNK_HOME using standard Splunk
+// precedence. Use HTTPOut (or future TCPOut, etc.) to extract a specific type.
 func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
 	payloads, err := readConfFiles(confFilePaths(splunkHome, "outputs.conf"))
 	if err != nil {
@@ -236,15 +217,11 @@ func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
 	return conf.MergeConf(layers), nil
 }
 
-// HTTPOut extracts the [httpout] stanza from a merged outputs conf map.
-// Returns conf.ErrNoHTTPOut if no [httpout] stanza is present.
 func HTTPOut(merged conf.ConfMap) (*conf.Output, error) {
 	return conf.HTTPOut(merged)
 }
 
 // CreateExporter builds a logs exporter from a merged outputs conf map.
-// It extracts [httpout] and builds a HEC exporter. Future output types
-// (tcpout, syslog, etc.) will be added here as additional cases.
 func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	output, err := conf.HTTPOut(merged)
 	if err != nil {
