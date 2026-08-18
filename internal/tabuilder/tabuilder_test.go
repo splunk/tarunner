@@ -16,11 +16,11 @@ import (
 func TestReadOutputs(t *testing.T) {
 	rootDir := filepath.Join("testdata", "outputs")
 	tests := []struct {
+		expectedErr   error
 		name          string
 		splunkHome    string
 		expectedToken string
 		expectedURI   string
-		expectedErr   error
 	}{
 		{
 			name:          "system_default_only",
