@@ -58,6 +58,14 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 
 // CreateReceiver builds a single logs receiver for an input stanza.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
+	return CreateReceiverWithSettings(ctx, baseDir, next, input, transforms, props, receiver.Settings{
+		TelemetrySettings: telemetrySettings,
+	})
+}
+
+// CreateReceiverWithSettings builds a single logs receiver for an input stanza
+// using the supplied receiver settings.
+func CreateReceiverWithSettings(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, receiverSettings receiver.Settings) (receiver.Logs, error) {
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
@@ -65,7 +73,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 	switch parsed.Kind {
 	case "script", "":
 		f := scriptreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), &scriptreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, receiverSettings), &scriptreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -73,7 +81,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "batch":
 		f := batchreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), batchreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, receiverSettings), batchreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -81,7 +89,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "monitor":
 		f := monitorreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), monitorreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, receiverSettings), monitorreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -89,7 +97,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "wineventlog":
 		f := wineventlogreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), wineventlogreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, receiverSettings), wineventlogreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -97,7 +105,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "tcp":
 		f := tcpreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), tcpreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, receiverSettings), tcpreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -105,7 +113,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "udp":
 		f := udpreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), udpreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, receiverSettings), udpreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -116,10 +124,11 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 	}
 }
 
-func settings(f receiver.Factory, path string, telemetrySettings component.TelemetrySettings) receiver.Settings {
+func settings(f receiver.Factory, path string, receiverSettings receiver.Settings) receiver.Settings {
 	return receiver.Settings{
 		ID:                component.MustNewIDWithName(f.Type().String(), path),
-		TelemetrySettings: telemetrySettings,
+		TelemetrySettings: receiverSettings.TelemetrySettings,
+		BuildInfo:         receiverSettings.BuildInfo,
 	}
 }
 

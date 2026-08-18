@@ -13,12 +13,6 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/splunk/tarunner/internal/conf"
-	"github.com/splunk/tarunner/internal/receiver/batchreceiver"
-	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
-	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
-	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
-	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
-	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 	"github.com/splunk/tarunner/internal/stanza"
 	"github.com/splunk/tarunner/internal/tabuilder"
 )
@@ -80,54 +74,12 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 	}
 
 	for _, f := range []SubReceiverFactory{
-		newBuiltInSubReceiver("script", scriptreceiver.NewFactory(), func(req ReceiverRequest) component.Config {
-			return &scriptreceiver.Config{
-				Input:      req.Input,
-				BaseDir:    req.BaseDir,
-				Transforms: req.Transforms,
-				Props:      req.Props,
-			}
-		}),
-		newBuiltInSubReceiver("batch", batchreceiver.NewFactory(), func(req ReceiverRequest) component.Config {
-			return batchreceiver.Config{
-				Input:      req.Input,
-				BaseDir:    req.BaseDir,
-				Transforms: req.Transforms,
-				Props:      req.Props,
-			}
-		}),
-		newBuiltInSubReceiver("monitor", monitorreceiver.NewFactory(), func(req ReceiverRequest) component.Config {
-			return monitorreceiver.Config{
-				Input:      req.Input,
-				BaseDir:    req.BaseDir,
-				Transforms: req.Transforms,
-				Props:      req.Props,
-			}
-		}),
-		newBuiltInSubReceiver("wineventlog", wineventlogreceiver.NewFactory(), func(req ReceiverRequest) component.Config {
-			return wineventlogreceiver.Config{
-				Input:      req.Input,
-				BaseDir:    req.BaseDir,
-				Transforms: req.Transforms,
-				Props:      req.Props,
-			}
-		}),
-		newBuiltInSubReceiver("tcp", tcpreceiver.NewFactory(), func(req ReceiverRequest) component.Config {
-			return tcpreceiver.Config{
-				Input:      req.Input,
-				BaseDir:    req.BaseDir,
-				Transforms: req.Transforms,
-				Props:      req.Props,
-			}
-		}),
-		newBuiltInSubReceiver("udp", udpreceiver.NewFactory(), func(req ReceiverRequest) component.Config {
-			return udpreceiver.Config{
-				Input:      req.Input,
-				BaseDir:    req.BaseDir,
-				Transforms: req.Transforms,
-				Props:      req.Props,
-			}
-		}),
+		newBuiltInSubReceiver("script"),
+		newBuiltInSubReceiver("batch"),
+		newBuiltInSubReceiver("monitor"),
+		newBuiltInSubReceiver("wineventlog"),
+		newBuiltInSubReceiver("tcp"),
+		newBuiltInSubReceiver("udp"),
 	} {
 		options.subReceivers[strings.ToLower(f.Scheme())] = f
 	}
@@ -203,15 +155,11 @@ func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next
 
 type builtInSubReceiver struct {
 	scheme string
-	f      receiver.Factory
-	config func(ReceiverRequest) component.Config
 }
 
-func newBuiltInSubReceiver(scheme string, f receiver.Factory, config func(ReceiverRequest) component.Config) SubReceiverFactory {
+func newBuiltInSubReceiver(scheme string) SubReceiverFactory {
 	return builtInSubReceiver{
 		scheme: scheme,
-		f:      f,
-		config: config,
 	}
 }
 
@@ -220,9 +168,5 @@ func (f builtInSubReceiver) Scheme() string {
 }
 
 func (f builtInSubReceiver) CreateLogs(ctx context.Context, settings receiver.Settings, req ReceiverRequest, next consumer.Logs) (receiver.Logs, error) {
-	return f.f.CreateLogs(ctx, receiver.Settings{
-		ID:                component.MustNewIDWithName(f.f.Type().String(), req.Path),
-		TelemetrySettings: settings.TelemetrySettings,
-		BuildInfo:         settings.BuildInfo,
-	}, f.config(req), next)
+	return tabuilder.CreateReceiverWithSettings(ctx, req.BaseDir, next, req.Input, req.Transforms, req.Props, settings)
 }
