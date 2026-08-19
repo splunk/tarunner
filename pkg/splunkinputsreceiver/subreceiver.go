@@ -73,17 +73,6 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 		subReceivers: map[string]SubReceiverFactory{},
 	}
 
-	for _, f := range []SubReceiverFactory{
-		newBuiltInSubReceiver("script"),
-		newBuiltInSubReceiver("batch"),
-		newBuiltInSubReceiver("monitor"),
-		newBuiltInSubReceiver("wineventlog"),
-		newBuiltInSubReceiver("tcp"),
-		newBuiltInSubReceiver("udp"),
-	} {
-		options.subReceivers[strings.ToLower(f.Scheme())] = f
-	}
-
 	for _, opt := range opts {
 		if opt != nil {
 			opt(&options)
@@ -140,33 +129,14 @@ func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next
 	if scheme == "" {
 		scheme = "script"
 	}
-	f, ok := o.subReceivers[scheme]
-	if !ok {
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
+	if f, ok := o.subReceivers[scheme]; ok {
+		return f.CreateLogs(ctx, settings, ReceiverRequest{
+			BaseDir:    baseDir,
+			Path:       parsed.Target,
+			Input:      input,
+			Transforms: transforms,
+			Props:      props,
+		}, next)
 	}
-	return f.CreateLogs(ctx, settings, ReceiverRequest{
-		BaseDir:    baseDir,
-		Path:       parsed.Target,
-		Input:      input,
-		Transforms: transforms,
-		Props:      props,
-	}, next)
-}
-
-type builtInSubReceiver struct {
-	scheme string
-}
-
-func newBuiltInSubReceiver(scheme string) SubReceiverFactory {
-	return builtInSubReceiver{
-		scheme: scheme,
-	}
-}
-
-func (f builtInSubReceiver) Scheme() string {
-	return f.scheme
-}
-
-func (f builtInSubReceiver) CreateLogs(ctx context.Context, settings receiver.Settings, req ReceiverRequest, next consumer.Logs) (receiver.Logs, error) {
-	return tabuilder.CreateReceiverWithSettings(ctx, req.BaseDir, next, req.Input, req.Transforms, req.Props, settings)
+	return tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
 }
