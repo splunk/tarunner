@@ -59,12 +59,6 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 		subExporters: map[string]SubExporterFactory{},
 	}
 
-	for _, f := range []SubExporterFactory{
-		builtInSubExporter{scheme: "httpout"},
-	} {
-		options.subExporters[strings.ToLower(f.Scheme())] = f
-	}
-
 	for _, opt := range opts {
 		if opt != nil {
 			opt(&options)
@@ -98,24 +92,11 @@ func (o factoryOptions) createLogsFunc(ctx context.Context, settings exporter.Se
 
 func (o factoryOptions) createExporter(ctx context.Context, baseDir string, output Output, settings exporter.Settings) (exporter.Logs, error) {
 	scheme := "httpout"
-	f, ok := o.subExporters[scheme]
-	if !ok {
-		return nil, fmt.Errorf("unsupported scheme %q", scheme)
+	if f, ok := o.subExporters[scheme]; ok {
+		return f.CreateLogs(ctx, settings, ExporterRequest{
+			BaseDir: baseDir,
+			Output:  output,
+		})
 	}
-	return f.CreateLogs(ctx, settings, ExporterRequest{
-		BaseDir: baseDir,
-		Output:  output,
-	})
-}
-
-type builtInSubExporter struct {
-	scheme string
-}
-
-func (f builtInSubExporter) Scheme() string {
-	return f.scheme
-}
-
-func (f builtInSubExporter) CreateLogs(_ context.Context, settings exporter.Settings, req ExporterRequest) (exporter.Logs, error) {
-	return tabuilder.CreateExporter(&req.Output, settings.Logger, settings.TelemetrySettings)
+	return tabuilder.CreateExporter(&output, settings.Logger, settings.TelemetrySettings)
 }
