@@ -124,23 +124,30 @@ func settings(f receiver.Factory, path string, telemetrySettings component.Telem
 	}
 }
 
-func confFilePaths(splunkHome, filename string) []string {
-	etcDir := filepath.Join(splunkHome, "etc")
-	var paths []string
-
-	paths = append(paths, filepath.Join(etcDir, "system", "default", filename))
-
-	appDefaults, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "default", filename))
-	sort.Strings(appDefaults)
-	paths = append(paths, appDefaults...)
-
-	appLocals, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*", "local", filename))
-	sort.Strings(appLocals)
-	paths = append(paths, appLocals...)
-
-	paths = append(paths, filepath.Join(etcDir, "system", "local", filename))
-
+func confFilePaths(dirs []string, filename string) []string {
+	paths := make([]string, len(dirs))
+	for i, dir := range dirs {
+		paths[i] = filepath.Join(dir, filename)
+	}
 	return paths
+}
+
+func splunkHomeDirs(splunkHome string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+
+	appDirs, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*"))
+	sort.Strings(appDirs)
+
+	dirs := []string{filepath.Join(etcDir, "system", "default")}
+	for _, app := range appDirs {
+		dirs = append(dirs, filepath.Join(app, "default"))
+	}
+	for _, app := range appDirs {
+		dirs = append(dirs, filepath.Join(app, "local"))
+	}
+	dirs = append(dirs, filepath.Join(etcDir, "system", "local"))
+
+	return dirs
 }
 
 func readConfFiles(paths []string) ([][]byte, error) {
@@ -211,19 +218,11 @@ func ReadProps(baseDir string) ([]conf.Prop, error) {
 // ReadOutputs merges outputs.conf across $SPLUNK_HOME using standard Splunk
 // precedence. Use HTTPOut (or future TCPOut, etc.) to extract a specific type.
 func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
-	payloads, err := readConfFiles(confFilePaths(splunkHome, "outputs.conf"))
+	payloads, err := readConfFiles(confFilePaths(splunkHomeDirs(splunkHome), "outputs.conf"))
 	if err != nil {
 		return nil, err
 	}
-	var layers []conf.ConfMap
-	for _, b := range payloads {
-		parsed, err := conf.ParseConf(b)
-		if err != nil {
-			return nil, err
-		}
-		layers = append(layers, parsed)
-	}
-	return conf.MergeConf(layers), nil
+	return conf.ParseAndMergeConf(payloads)
 }
 
 func HTTPOut(merged conf.ConfMap) (*conf.Output, error) {

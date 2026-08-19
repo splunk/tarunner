@@ -44,6 +44,18 @@ func ParseConf(payload []byte) (ConfMap, error) {
 	return result, nil
 }
 
+func ParseAndMergeConf(payloads [][]byte) (ConfMap, error) {
+	var layers []ConfMap
+	for _, b := range payloads {
+		parsed, err := ParseConf(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, parsed)
+	}
+	return MergeConf(layers), nil
+}
+
 func MergeConf(layers []ConfMap) ConfMap {
 	merged := make(ConfMap)
 	for _, layer := range layers {
