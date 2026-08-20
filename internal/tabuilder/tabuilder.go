@@ -170,12 +170,16 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ReadInputs reads inputs.conf, preferring local/ over default/.
-func ReadInputs(baseDir string) ([]conf.Input, error) {
-	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "inputs.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+// ReadInputs discovers and merges inputs.conf files from splunkHome using
+// standard Splunk precedence. Returns nil (no error) when absent.
+func ReadInputs(splunkHome string) ([]conf.Input, error) {
+	var layers [][]conf.Input
+	for _, path := range confFilePaths(splunkHomeDirs(splunkHome), "inputs.conf") {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
 			return nil, err
 		}
 		appDir := filepath.Dir(filepath.Dir(path)) // strip /default or /local
@@ -191,7 +195,7 @@ func ReadInputs(baseDir string) ([]conf.Input, error) {
 // ReadTransforms discovers and merges transforms.conf files from splunkHome
 // using standard Splunk precedence. Returns nil (no error) when absent.
 func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
-	payloads, err := readConfFiles(confFilePaths(splunkHome, "transforms.conf"))
+	payloads, err := readConfFiles(confFilePaths(splunkHomeDirs(splunkHome), "transforms.conf"))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +213,7 @@ func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
 // ReadProps discovers and merges props.conf files from splunkHome using
 // standard Splunk precedence. Returns nil (no error) when absent.
 func ReadProps(splunkHome string) ([]conf.Prop, error) {
-	payloads, err := readConfFiles(confFilePaths(splunkHome, "props.conf"))
+	payloads, err := readConfFiles(confFilePaths(splunkHomeDirs(splunkHome), "props.conf"))
 	if err != nil {
 		return nil, err
 	}
@@ -222,17 +226,6 @@ func ReadProps(splunkHome string) ([]conf.Prop, error) {
 		layers = append(layers, props)
 	}
 	return conf.MergeProps(layers), nil
-}
-
-// ReadOutputs discovers and merges outputs.conf files from splunkHome using
-// standard Splunk precedence. Returns the merged ConfMap. Callers use HTTPOut
-// (or future TCPOut, SyslogOut, etc.) to extract a specific output type.
-func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
-	payloads, err := readConfFiles(confFilePaths(splunkHome, "outputs.conf"))
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadProps(b)
 }
 
 // ReadOutputs merges outputs.conf across $SPLUNK_HOME using standard Splunk
