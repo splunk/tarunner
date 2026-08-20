@@ -138,6 +138,8 @@ github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee h1:W5t00kpgFd
 github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.157.0 h1:65Y/2RuI7ov7PbwL4EE4Jf0J/2GIKGRN+lmmRU7sj7k=
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.157.0/go.mod h1:EEHR9WkKjnZA30xrn7tz6jiczE49RVJnQOgLqS4nJDE=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.157.0 h1:4t8wbN7CzwAra4dW7EjtqO+Gt3qJoAEP87vu/KuKfZ8=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.157.0/go.mod h1:fc+AF4Np1AMkDIxtZSPduXV/FTl6VeME3rp+ZsawcfY=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.157.0 h1:ZUHfd8qumKAMctr0CnRdsMjfke/RBU8702O3auyWMtM=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.157.0/go.mod h1:x6bJlY9KOnHTbRqKhdmR5jbutjunFsDC5r+OP60+RRU=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.157.0 h1:aQVvm4iiT1DUx2CzeDLEWETDKgbBvWAPJgancj6SQXY=
