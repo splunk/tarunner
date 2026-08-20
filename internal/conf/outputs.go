@@ -24,9 +24,6 @@ type Output struct {
 	// Both require configuring BatcherConfig on the exporter helper.
 }
 
-// ParseConf parses a single outputs.conf payload into a generic
-// stanza -> key -> value map. All stanza names and keys are lower-cased.
-// ParseConf parses a single .conf payload into a ConfMap.
 func ParseConf(payload []byte) (ConfMap, error) {
 	f, err := ini.Load(payload)
 	if err != nil {
@@ -47,8 +44,18 @@ func ParseConf(payload []byte) (ConfMap, error) {
 	return result, nil
 }
 
-// MergeConf merges multiple ConfMap layers in order (lowest to highest
-// precedence). Later layers override keys from earlier ones.
+func ParseAndMergeConf(payloads [][]byte) (ConfMap, error) {
+	var layers []ConfMap
+	for _, b := range payloads {
+		parsed, err := ParseConf(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, parsed)
+	}
+	return MergeConf(layers), nil
+}
+
 func MergeConf(layers []ConfMap) ConfMap {
 	merged := make(ConfMap)
 	for _, layer := range layers {
@@ -64,8 +71,6 @@ func MergeConf(layers []ConfMap) ConfMap {
 	return merged
 }
 
-// HTTPOut extracts the [httpout] stanza from a ConfMap.
-// Returns ErrNoHTTPOut if the stanza is absent.
 func HTTPOut(merged ConfMap) (*Output, error) {
 	keys, ok := merged["httpout"]
 	if !ok {

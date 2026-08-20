@@ -16,11 +16,11 @@ import (
 func TestReadOutputs(t *testing.T) {
 	rootDir := filepath.Join("testdata", "outputs")
 	tests := []struct {
+		expectedErr   error
 		name          string
 		splunkHome    string
 		expectedToken string
 		expectedURI   string
-		expectedErr   error
 	}{
 		{
 			name:          "system_default_only",
@@ -39,6 +39,12 @@ func TestReadOutputs(t *testing.T) {
 			splunkHome:    filepath.Join(rootDir, "system_local_wins"),
 			expectedToken: "token-system-local",
 			expectedURI:   "https://system-local:8088/services/collector/event",
+		},
+		{
+			name:          "app_local_wins_over_app_default",
+			splunkHome:    filepath.Join(rootDir, "app_local_wins_over_app_default"),
+			expectedToken: "token-app-local",
+			expectedURI:   "https://app-local:8088/services/collector/event",
 		},
 		{
 			name:        "no_httpout",

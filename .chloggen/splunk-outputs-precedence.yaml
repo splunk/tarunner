@@ -1,0 +1,12 @@
+change_type: enhancement
+
+component: splunkoutputsexporter
+
+note: "`splunk_outputs` now discovers and layers `outputs.conf` with standard Splunk precedence (`etc/system/default` < `etc/apps/*` < `etc/system/local`)."
+
+issues: [114]
+
+subtext: |
+  The `base_dir` config field (or `$SPLUNK_HOME` env var) now points to the Splunk
+  installation root rather than a single TA directory. The merged `[httpout]` stanza
+  is assembled from all layers with later files winning per key.
