@@ -3,10 +3,12 @@ module github.com/splunk/tarunner/pkg/splunkinputsreceiver
 go 1.26.4
 
 require (
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.157.0
 	github.com/splunk/tarunner v0.5.1
 	go.opentelemetry.io/collector/component v1.63.0
 	go.opentelemetry.io/collector/consumer v1.63.0
 	go.opentelemetry.io/collector/receiver v1.63.0
+	go.uber.org/zap v1.28.0
 )
 
 require (
@@ -97,7 +99,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
