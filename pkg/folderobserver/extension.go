@@ -68,11 +68,13 @@ func (l *folderLister) ListEndpoints() []observer.Endpoint {
 			continue
 		}
 		absPath := filepath.Join(l.path, entry.Name())
+		l.logger.Info("folder_observer: discovered directory", zap.String("path", absPath))
 		endpoints = append(endpoints, observer.Endpoint{
 			ID:      observer.EndpointID(absPath),
 			Target:  absPath,
 			Details: &folderDetails{Name: entry.Name(), Path: absPath},
 		})
 	}
+	l.logger.Info("folder_observer: scan complete", zap.String("path", l.path), zap.Int("count", len(endpoints)))
 	return endpoints
 }
