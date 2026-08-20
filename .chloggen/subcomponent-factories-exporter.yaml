@@ -5,7 +5,7 @@ change_type: enhancement
 component: splunk_outputs
 
 # A brief description of the change.  Surround your text with quotes ("") if it needs to start with a ` character.
-note: expose factory options for registering or overriding the splunk_outputs httpout sub-component
+note: expose factory options for registering or overriding splunk_outputs sub-components
 
 # One or more tracking issues related to the change
 issues: [111]

@@ -10,8 +10,8 @@ import (
 
 // NewFactory returns an exporter factory for splunk_outputs.
 //
-// By default, the factory supports tarunner's built-in output stanza schemes.
-// Overrides for built-in schemes, can be registered with
+// By default, the factory supports tarunner's built-in [httpout] stanza.
+// Additional schemes, or overrides for built-in schemes, can be registered with
 // WithSubExporter.
 func NewFactory(opts ...Option) exporter.Factory {
 	options := newFactoryOptions(opts...)

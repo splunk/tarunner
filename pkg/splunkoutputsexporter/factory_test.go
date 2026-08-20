@@ -28,11 +28,15 @@ func TestWithSubExporterOverridesBuiltInHTTPOut(t *testing.T) {
 	require.NotNil(t, exp)
 	require.Len(t, fake.requests, 1)
 	require.Equal(t, baseDir, fake.requests[0].BaseDir)
-	require.Equal(t, "token", fake.requests[0].Output.Token)
-	require.Equal(t, "https://example.com/services/collector/event", fake.requests[0].Output.URI)
+	require.Empty(t, fake.requests[0].Path)
+	require.Equal(t, "httpout", fake.requests[0].Output.Configuration.Stanza.Name)
+	require.NotNil(t, fake.requests[0].Output.Configuration.Stanza.Params.Get("httpEventCollectorToken"))
+	require.Equal(t, "token", fake.requests[0].Output.Configuration.Stanza.Params.Get("httpEventCollectorToken").Value)
+	require.NotNil(t, fake.requests[0].Output.Configuration.Stanza.Params.Get("uri"))
+	require.Equal(t, "https://example.com/services/collector/event", fake.requests[0].Output.Configuration.Stanza.Params.Get("uri").Value)
 }
 
-func TestWithSubExporterOnlyReadsHTTPOut(t *testing.T) {
+func TestWithSubExporterReadsRegisteredOutputSchemes(t *testing.T) {
 	baseDir := writeTA(t, "[httpout]\nuri = https://example.com/services/collector/event\nhttpEventCollectorToken = token\n\n[tcpout:primary]\nserver = splunk:9997\n")
 	httpout := &fakeSubExporterFactory{scheme: "httpout"}
 	tcpout := &fakeSubExporterFactory{scheme: "tcpout"}
@@ -45,18 +49,35 @@ func TestWithSubExporterOnlyReadsHTTPOut(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, exp)
 	require.Len(t, httpout.requests, 1)
-	require.Empty(t, tcpout.requests)
+	require.Len(t, tcpout.requests, 1)
+	require.Equal(t, "primary", tcpout.requests[0].Path)
+	require.Equal(t, "tcpout:primary", tcpout.requests[0].Output.Configuration.Stanza.Name)
+	require.NotNil(t, tcpout.requests[0].Output.Configuration.Stanza.Params.Get("server"))
+	require.Equal(t, "splunk:9997", tcpout.requests[0].Output.Configuration.Stanza.Params.Get("server").Value)
 }
 
-func TestWithSubExporterRequiresHTTPOut(t *testing.T) {
-	baseDir := writeTA(t, "[tcpout:primary]\nserver = splunk:9997\n")
-	fake := &fakeSubExporterFactory{scheme: "tcpout"}
+func TestWithSubExporterRegistersCustomScheme(t *testing.T) {
+	baseDir := writeTA(t, "[s2s://primary]\nserver = splunk:9997\n")
+	fake := &fakeSubExporterFactory{scheme: "s2s"}
 
 	factory := splunkoutputsexporter.NewFactory(splunkoutputsexporter.WithSubExporter(fake))
 	exp, err := factory.CreateLogs(context.Background(), newExporterSettings(), splunkoutputsexporter.Config{BaseDir: baseDir})
-	require.ErrorContains(t, err, `no [httpout] stanza found in outputs.conf`)
+	require.NoError(t, err)
+	require.NotNil(t, exp)
+	require.Len(t, fake.requests, 1)
+	require.Equal(t, "primary", fake.requests[0].Path)
+	require.Equal(t, "s2s://primary", fake.requests[0].Output.Configuration.Stanza.Name)
+	require.NotNil(t, fake.requests[0].Output.Configuration.Stanza.Params.Get("server"))
+	require.Equal(t, "splunk:9997", fake.requests[0].Output.Configuration.Stanza.Params.Get("server").Value)
+}
+
+func TestWithSubExporterRejectsUnsupportedScheme(t *testing.T) {
+	baseDir := writeTA(t, "[tcpout:primary]\nserver = splunk:9997\n")
+
+	factory := splunkoutputsexporter.NewFactory()
+	exp, err := factory.CreateLogs(context.Background(), newExporterSettings(), splunkoutputsexporter.Config{BaseDir: baseDir})
+	require.ErrorContains(t, err, `unsupported scheme "tcpout"`)
 	require.Nil(t, exp)
-	require.Empty(t, fake.requests)
 }
 
 type fakeSubExporterFactory struct {
@@ -100,8 +121,8 @@ func newExporterSettings() exporter.Settings {
 func writeTA(t *testing.T, outputsConf string) string {
 	t.Helper()
 	baseDir := t.TempDir()
-	defaultDir := filepath.Join(baseDir, "default")
-	require.NoError(t, os.Mkdir(defaultDir, 0o755))
+	defaultDir := filepath.Join(baseDir, "etc", "system", "default")
+	require.NoError(t, os.MkdirAll(defaultDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "outputs.conf"), []byte(outputsConf), 0o600))
 	return baseDir
 }
