@@ -3,7 +3,7 @@ module github.com/splunk/tarunner/pkg/splunkoutputsexporter
 go 1.26.4
 
 require (
-	github.com/splunk/tarunner v0.5.0
+	github.com/splunk/tarunner v0.5.1
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/collector/component v1.63.0
 	go.opentelemetry.io/collector/consumer v1.63.0

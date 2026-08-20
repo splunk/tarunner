@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
@@ -73,7 +74,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 		}, next)
 	case "batch":
 		f := batchreceiver.NewFactory()
-		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), &scriptreceiver.Config{
+		return f.CreateLogs(ctx, settings(f, parsed.Target, telemetrySettings), batchreceiver.Config{
 			Input:      input,
 			BaseDir:    baseDir,
 			Transforms: transforms,
@@ -121,6 +122,47 @@ func settings(f receiver.Factory, path string, telemetrySettings component.Telem
 		ID:                component.MustNewIDWithName(f.Type().String(), path),
 		TelemetrySettings: telemetrySettings,
 	}
+}
+
+func confFilePaths(dirs []string, filename string) []string {
+	paths := make([]string, len(dirs))
+	for i, dir := range dirs {
+		paths[i] = filepath.Join(dir, filename)
+	}
+	return paths
+}
+
+func splunkHomeDirs(splunkHome string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+
+	appDirs, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*"))
+	sort.Strings(appDirs)
+
+	dirs := []string{filepath.Join(etcDir, "system", "default")}
+	for _, app := range appDirs {
+		dirs = append(dirs, filepath.Join(app, "default"))
+	}
+	for _, app := range appDirs {
+		dirs = append(dirs, filepath.Join(app, "local"))
+	}
+	dirs = append(dirs, filepath.Join(etcDir, "system", "local"))
+
+	return dirs
+}
+
+func readConfFiles(paths []string) ([][]byte, error) {
+	var payloads [][]byte
+	for _, path := range paths {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		payloads = append(payloads, b)
+	}
+	return payloads, nil
 }
 
 // ReadInputs reads inputs.conf, preferring local/ over default/.
@@ -173,25 +215,26 @@ func ReadProps(baseDir string) ([]conf.Prop, error) {
 	return conf.ReadProps(b)
 }
 
-// ReadOutputs reads outputs.conf from baseDir, preferring local/ over default/.
-// Returns the [httpout] stanza, or nil if no [httpout] stanza is present.
-func ReadOutputs(baseDir string) (*conf.Output, error) {
-	fileToRead := filepath.Join(baseDir, "local", "outputs.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "outputs.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-	}
-	b, err := os.ReadFile(fileToRead)
+// ReadOutputs merges outputs.conf across $SPLUNK_HOME using standard Splunk
+// precedence. Use HTTPOut (or future TCPOut, etc.) to extract a specific type.
+func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
+	payloads, err := readConfFiles(confFilePaths(splunkHomeDirs(splunkHome), "outputs.conf"))
 	if err != nil {
 		return nil, err
 	}
-	return conf.ReadOutputs(b)
+	return conf.ParseAndMergeConf(payloads)
 }
 
-// CreateExporter builds a logs exporter from the [httpout] stanza.
-func CreateExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+func HTTPOut(merged conf.ConfMap) (*conf.Output, error) {
+	return conf.HTTPOut(merged)
+}
+
+// CreateExporter builds a logs exporter from a merged outputs conf map.
+func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+	output, err := conf.HTTPOut(merged)
+	if err != nil {
+		return nil, err
+	}
 	return newHECExporter(output, logger, telemetrySettings)
 }
 
