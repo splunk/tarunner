@@ -29,20 +29,20 @@ func createDefaultConfig() component.Config {
 func createLogsFunc(_ context.Context, settings exporter.Settings, config component.Config) (exporter.Logs, error) {
 	cfg := config.(Config)
 
-	baseDir := cfg.BaseDir
-	if baseDir == "" {
-		baseDir = os.Getenv("SPLUNK_HOME")
+	splunkHome := cfg.BaseDir
+	if splunkHome == "" {
+		splunkHome = os.Getenv("SPLUNK_HOME")
 	}
-	if baseDir == "" {
-		return nil, fmt.Errorf("splunk_outputs: path is not set and SPLUNK_HOME is not defined")
+	if splunkHome == "" {
+		return nil, fmt.Errorf("splunk_outputs: base_dir is not set and SPLUNK_HOME is not defined")
 	}
 
-	output, err := tabuilder.ReadOutputs(baseDir)
+	merged, err := tabuilder.ReadOutputs(splunkHome)
 	if err != nil {
-		return nil, fmt.Errorf("splunk_outputs: %w (base_dir: %s)", err, baseDir)
+		return nil, fmt.Errorf("splunk_outputs: %w (base_dir: %s)", err, splunkHome)
 	}
 
-	exp, err := tabuilder.CreateExporter(output, settings.Logger, settings.TelemetrySettings)
+	exp, err := tabuilder.CreateExporter(merged, settings.Logger, settings.TelemetrySettings)
 	if err != nil {
 		return nil, fmt.Errorf("splunk_outputs: %w", err)
 	}

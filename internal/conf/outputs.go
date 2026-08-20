@@ -9,11 +9,13 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-// ErrNoHTTPOut is returned by ReadOutputs when outputs.conf contains no [httpout] stanza.
+// ErrNoHTTPOut is returned when outputs.conf contains no [httpout] stanza.
 var ErrNoHTTPOut = errors.New("no [httpout] stanza found in outputs.conf")
 
+// ConfMap is a parsed .conf file: stanza name -> key -> value.
+type ConfMap map[string]map[string]string
+
 // Output holds the settings from the [httpout] stanza in outputs.conf.
-// outputs.conf supports exactly one [httpout] stanza.
 type Output struct {
 	Token string
 	URI   string
@@ -22,22 +24,60 @@ type Output struct {
 	// Both require configuring BatcherConfig on the exporter helper.
 }
 
-// ReadOutputs parses an outputs.conf payload and returns the [httpout] stanza.
-// Returns ErrNoHTTPOut if no [httpout] stanza is present.
-func ReadOutputs(payload []byte) (*Output, error) {
+func ParseConf(payload []byte) (ConfMap, error) {
 	f, err := ini.Load(payload)
 	if err != nil {
 		return nil, err
 	}
-	if !f.HasSection("httpout") {
+	result := make(ConfMap)
+	for _, section := range f.Sections() {
+		name := section.Name()
+		if name == ini.DefaultSection {
+			continue
+		}
+		keys := make(map[string]string)
+		for _, key := range section.Keys() {
+			keys[key.Name()] = key.Value()
+		}
+		result[name] = keys
+	}
+	return result, nil
+}
+
+func ParseAndMergeConf(payloads [][]byte) (ConfMap, error) {
+	var layers []ConfMap
+	for _, b := range payloads {
+		parsed, err := ParseConf(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, parsed)
+	}
+	return MergeConf(layers), nil
+}
+
+func MergeConf(layers []ConfMap) ConfMap {
+	merged := make(ConfMap)
+	for _, layer := range layers {
+		for stanza, keys := range layer {
+			if merged[stanza] == nil {
+				merged[stanza] = make(map[string]string)
+			}
+			for k, v := range keys {
+				merged[stanza][k] = v
+			}
+		}
+	}
+	return merged
+}
+
+func HTTPOut(merged ConfMap) (*Output, error) {
+	keys, ok := merged["httpout"]
+	if !ok {
 		return nil, ErrNoHTTPOut
 	}
-	section, err := f.GetSection("httpout")
-	if err != nil {
-		return nil, err
-	}
 	return &Output{
-		Token: section.Key("httpEventCollectorToken").String(),
-		URI:   section.Key("uri").String(),
+		Token: keys["httpEventCollectorToken"],
+		URI:   keys["uri"],
 	}, nil
 }
