@@ -60,45 +60,13 @@ func packReceivers(receivers []receiver.Logs) receiver.Logs {
 	}
 }
 
-func createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
-	cfg := config.(Config)
-
-	exclusiveCount := 0
-	if cfg.BaseDir != "" {
-		exclusiveCount++
-	}
-	if cfg.Path != "" {
-		exclusiveCount++
-	}
-	if len(cfg.WatchObservers) > 0 {
-		exclusiveCount++
-	}
-	if exclusiveCount > 1 {
-		return nil, fmt.Errorf("splunk_inputs: base_dir, path, and watch_observers are mutually exclusive")
-	}
-
-	if len(cfg.WatchObservers) > 0 {
-		return &watchingReceiver{
-			cfg:      cfg,
-			settings: settings,
-			logs:     logs,
-			active:   make(map[observer.EndpointID]receiver.Logs),
-		}, nil
-	}
-
-	taDir, err := resolveTADir(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return buildReceiver(ctx, taDir, logs, settings)
-}
-
 // watchingReceiver subscribes to one or more observers and starts a sub-receiver
 // per directory endpoint.
 type watchingReceiver struct {
 	cfg      Config
 	settings receiver.Settings
 	logs     consumer.Logs
+	opts     factoryOptions
 
 	mu     sync.Mutex
 	active map[observer.EndpointID]receiver.Logs
@@ -118,6 +86,7 @@ func (w *watchingReceiver) Start(ctx context.Context, host component.Host) error
 	w.ctx, w.cancel = context.WithCancel(ctx)
 
 	for _, obsID := range w.cfg.WatchObservers {
+		w.settings.Logger.Info("splunk_inputs: subscribing to observer", zap.String("observer", obsID.String()))
 		ext, ok := host.GetExtensions()[obsID]
 		if !ok {
 			return fmt.Errorf("splunk_inputs: observer extension %q not found", obsID)
@@ -126,7 +95,9 @@ func (w *watchingReceiver) Start(ctx context.Context, host component.Host) error
 		if !ok {
 			return fmt.Errorf("splunk_inputs: extension %q does not implement observer.Observable", obsID)
 		}
+		w.settings.Logger.Info("splunk_inputs: calling ListAndWatch", zap.String("observer", obsID.String()))
 		obs.ListAndWatch(w)
+		w.settings.Logger.Info("splunk_inputs: ListAndWatch returned", zap.String("observer", obsID.String()))
 	}
 	return nil
 }
@@ -151,12 +122,31 @@ func (w *watchingReceiver) OnAdd(endpoints []observer.Endpoint) {
 			w.settings.Logger.Warn("splunk_inputs: endpoint missing path attribute", zap.String("id", string(e.ID)))
 			continue
 		}
-		r, err := buildReceiver(w.ctx, path, w.logs, w.settings)
+		inputs, err := tabuilder.ReadInputs(path)
 		if err != nil {
-			w.settings.Logger.Error("splunk_inputs: failed to build receiver for endpoint",
+			w.settings.Logger.Error("splunk_inputs: failed to read inputs for endpoint",
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
+		transforms, err := tabuilder.ReadTransforms(path)
+		if err != nil {
+			w.settings.Logger.Error("splunk_inputs: failed to read transforms for endpoint",
+				zap.String("path", path), zap.Error(err))
+			continue
+		}
+		props, err := tabuilder.ReadProps(path)
+		if err != nil {
+			w.settings.Logger.Error("splunk_inputs: failed to read props for endpoint",
+				zap.String("path", path), zap.Error(err))
+			continue
+		}
+		receivers, err := w.opts.createReceivers(w.ctx, inputs, transforms, props, path, w.logs, w.settings)
+		if err != nil {
+			w.settings.Logger.Error("splunk_inputs: failed to create receivers for endpoint",
+				zap.String("path", path), zap.Error(err))
+			continue
+		}
+		r := packReceivers(receivers)
 		if err := r.Start(w.ctx, w.host); err != nil {
 			w.settings.Logger.Error("splunk_inputs: failed to start receiver for endpoint",
 				zap.String("path", path), zap.Error(err))
@@ -188,26 +178,6 @@ func (w *watchingReceiver) OnRemove(endpoints []observer.Endpoint) {
 func (w *watchingReceiver) OnChange(endpoints []observer.Endpoint) {
 	w.OnRemove(endpoints)
 	w.OnAdd(endpoints)
-}
-
-func buildReceiver(ctx context.Context, taDir string, logs consumer.Logs, settings receiver.Settings) (receiver.Logs, error) {
-	inputs, err := tabuilder.ReadInputs(taDir)
-	if err != nil {
-		return nil, err
-	}
-	transforms, err := tabuilder.ReadTransforms(taDir)
-	if err != nil {
-		return nil, err
-	}
-	props, err := tabuilder.ReadProps(taDir)
-	if err != nil {
-		return nil, err
-	}
-	receivers, err := tabuilder.CreateReceivers(ctx, inputs, transforms, props, taDir, logs, settings.TelemetrySettings)
-	if err != nil {
-		return nil, err
-	}
-	return packReceivers(receivers), nil
 }
 
 // resolveTADir returns the directory to read conf files from.

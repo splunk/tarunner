@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer"
+
 	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/stanza"
 	"github.com/splunk/tarunner/internal/tabuilder"
@@ -83,21 +85,39 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
-	baseDir := cfg.BaseDir
-	inputs, err := tabuilder.ReadInputs(baseDir)
-	if err != nil {
-		return nil, err
+
+	if len(cfg.WatchObservers) > 0 {
+		if cfg.BaseDir != "" || cfg.Path != "" {
+			return nil, fmt.Errorf("splunk_inputs: watch_observers is mutually exclusive with base_dir and path")
+		}
+		return &watchingReceiver{
+			cfg:      cfg,
+			settings: settings,
+			logs:     logs,
+			opts:     o,
+			active:   make(map[observer.EndpointID]receiver.Logs),
+		}, nil
 	}
-	transforms, err := tabuilder.ReadTransforms(baseDir)
-	if err != nil {
-		return nil, err
-	}
-	props, err := tabuilder.ReadProps(baseDir)
+
+	taDir, err := resolveTADir(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	receivers, err := o.createReceivers(ctx, inputs, transforms, props, baseDir, logs, settings)
+	inputs, err := tabuilder.ReadInputs(taDir)
+	if err != nil {
+		return nil, err
+	}
+	transforms, err := tabuilder.ReadTransforms(taDir)
+	if err != nil {
+		return nil, err
+	}
+	props, err := tabuilder.ReadProps(taDir)
+	if err != nil {
+		return nil, err
+	}
+
+	receivers, err := o.createReceivers(ctx, inputs, transforms, props, taDir, logs, settings)
 	if err != nil {
 		return nil, err
 	}
