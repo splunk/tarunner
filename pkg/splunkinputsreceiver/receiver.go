@@ -122,12 +122,14 @@ func (w *watchingReceiver) OnAdd(endpoints []observer.Endpoint) {
 			w.settings.Logger.Warn("splunk_inputs: endpoint missing path attribute", zap.String("id", string(e.ID)))
 			continue
 		}
+		w.settings.Logger.Info("splunk_inputs: building receivers for endpoint", zap.String("path", path))
 		inputs, err := tabuilder.ReadInputs(path)
 		if err != nil {
 			w.settings.Logger.Error("splunk_inputs: failed to read inputs for endpoint",
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
+		w.settings.Logger.Info("splunk_inputs: read inputs", zap.String("path", path), zap.Int("count", len(inputs)))
 		transforms, err := tabuilder.ReadTransforms(path)
 		if err != nil {
 			w.settings.Logger.Error("splunk_inputs: failed to read transforms for endpoint",
@@ -146,12 +148,14 @@ func (w *watchingReceiver) OnAdd(endpoints []observer.Endpoint) {
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
+		w.settings.Logger.Info("splunk_inputs: created receivers for endpoint", zap.String("path", path), zap.Int("count", len(receivers)))
 		r := packReceivers(receivers)
 		if err := r.Start(w.ctx, w.host); err != nil {
 			w.settings.Logger.Error("splunk_inputs: failed to start receiver for endpoint",
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
+		w.settings.Logger.Info("splunk_inputs: started receiver for endpoint", zap.String("path", path))
 		w.mu.Lock()
 		w.active[e.ID] = r
 		w.mu.Unlock()

@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer"
 
@@ -127,13 +128,20 @@ func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Se
 func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, transforms []Transform, props []Prop, baseDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
+		name := input.Configuration.Stanza.Name
 		disabled := input.Configuration.Stanza.Params.Get("disabled")
 		if disabled != nil && disabled.Value == "1" {
+			settings.Logger.Info("splunk_inputs: skipping disabled stanza", zap.String("stanza", name))
 			continue
 		}
+		settings.Logger.Info("splunk_inputs: creating receiver for stanza", zap.String("stanza", name))
 		l, err := o.createReceiver(ctx, baseDir, next, input, transforms, props, settings)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
+			return nil, fmt.Errorf("failed to create receiver %q: %w", name, err)
+		}
+		if l == nil {
+			settings.Logger.Info("splunk_inputs: skipping unsupported stanza kind", zap.String("stanza", name))
+			continue
 		}
 		receivers = append(receivers, l)
 	}
