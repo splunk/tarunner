@@ -5,12 +5,19 @@ package splunkinputsreceiver
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer"
 
 	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/internal/tabuilder"
 )
 
 type (
@@ -58,4 +65,107 @@ func WithSubReceiver(f SubReceiverFactory) Option {
 		}
 		o.subReceivers[strings.ToLower(f.Scheme())] = f
 	}
+}
+
+type factoryOptions struct {
+	subReceivers map[string]SubReceiverFactory
+}
+
+func newFactoryOptions(opts ...Option) factoryOptions {
+	options := factoryOptions{
+		subReceivers: map[string]SubReceiverFactory{},
+	}
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&options)
+		}
+	}
+	return options
+}
+
+func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
+	cfg := config.(Config)
+
+	if len(cfg.WatchObservers) > 0 {
+		if cfg.BaseDir != "" || cfg.Path != "" {
+			return nil, fmt.Errorf("splunk_inputs: watch_observers is mutually exclusive with base_dir and path")
+		}
+		return &watchingReceiver{
+			cfg:      cfg,
+			settings: settings,
+			logs:     logs,
+			opts:     o,
+			active:   make(map[observer.EndpointID]receiver.Logs),
+		}, nil
+	}
+
+	taDir, err := resolveTADir(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	inputs, err := tabuilder.ReadInputs(taDir)
+	if err != nil {
+		return nil, err
+	}
+	transforms, err := tabuilder.ReadTransforms(taDir)
+	if err != nil {
+		return nil, err
+	}
+	props, err := tabuilder.ReadProps(taDir)
+	if err != nil {
+		return nil, err
+	}
+
+	receivers, err := o.createReceivers(ctx, inputs, transforms, props, taDir, logs, settings)
+	if err != nil {
+		return nil, err
+	}
+	return packReceivers(receivers), nil
+}
+
+func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, transforms []Transform, props []Prop, baseDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
+	var receivers []receiver.Logs
+	for _, input := range inputs {
+		name := input.Configuration.Stanza.Name
+		disabled := input.Configuration.Stanza.Params.Get("disabled")
+		if disabled != nil && disabled.Value == "1" {
+			settings.Logger.Info("splunk_inputs: skipping disabled stanza", zap.String("stanza", name))
+			continue
+		}
+		settings.Logger.Info("splunk_inputs: creating receiver for stanza", zap.String("stanza", name))
+		l, err := o.createReceiver(ctx, baseDir, next, input, transforms, props, settings)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create receiver %q: %w", name, err)
+		}
+		receivers = append(receivers, l)
+	}
+	return receivers, nil
+}
+
+func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next consumer.Logs, input Input, transforms []Transform, props []Prop, settings receiver.Settings) (receiver.Logs, error) {
+	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
+	if err != nil {
+		return nil, err
+	}
+	scheme := parsed.Kind
+	if scheme == "" {
+		scheme = "script"
+	}
+	if f, ok := o.subReceivers[scheme]; ok {
+		return f.CreateLogs(ctx, settings, ReceiverRequest{
+			BaseDir:    baseDir,
+			Path:       parsed.Target,
+			Input:      input,
+			Transforms: transforms,
+			Props:      props,
+		}, next)
+	}
+	l, err := tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
+	if l == nil && err == nil {
+		settings.Logger.Info("splunk_inputs: skipping unsupported stanza kind", zap.String("stanza", input.Configuration.Stanza.Name))
+		return nopInstance, nil
+	}
+	return l, err
 }
