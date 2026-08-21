@@ -196,11 +196,12 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ReadInputs discovers and merges inputs.conf files from splunkHome using
-// standard Splunk precedence. Returns nil (no error) when absent.
-func ReadInputs(splunkHome string) ([]conf.Input, error) {
+// ReadInputs discovers and merges inputs.conf files from dir using standard
+// Splunk precedence. dir may be a Splunk home or a single TA directory.
+// Returns nil (no error) when absent.
+func ReadInputs(dir string) ([]conf.Input, error) {
 	var layers [][]conf.Input
-	for _, path := range confFilePaths(confDirs(splunkHome), "inputs.conf") {
+	for _, path := range confFilePaths(confDirs(dir), "inputs.conf") {
 		b, err := os.ReadFile(path)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -218,10 +219,10 @@ func ReadInputs(splunkHome string) ([]conf.Input, error) {
 	return conf.MergeInputs(layers), nil
 }
 
-// ReadTransforms discovers and merges transforms.conf files from splunkHome
-// using standard Splunk precedence. Returns nil (no error) when absent.
-func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
-	payloads, err := readConfFiles(confFilePaths(confDirs(splunkHome), "transforms.conf"))
+// ReadTransforms discovers and merges transforms.conf files from dir using
+// standard Splunk precedence. Returns nil (no error) when absent.
+func ReadTransforms(dir string) ([]conf.Transform, error) {
+	payloads, err := readConfFiles(confFilePaths(confDirs(dir), "transforms.conf"))
 	if err != nil {
 		return nil, err
 	}
@@ -236,10 +237,10 @@ func ReadTransforms(splunkHome string) ([]conf.Transform, error) {
 	return conf.MergeTransforms(layers), nil
 }
 
-// ReadProps discovers and merges props.conf files from splunkHome using
-// standard Splunk precedence. Returns nil (no error) when absent.
-func ReadProps(splunkHome string) ([]conf.Prop, error) {
-	payloads, err := readConfFiles(confFilePaths(confDirs(splunkHome), "props.conf"))
+// ReadProps discovers and merges props.conf files from dir using standard
+// Splunk precedence. Returns nil (no error) when absent.
+func ReadProps(dir string) ([]conf.Prop, error) {
+	payloads, err := readConfFiles(confFilePaths(confDirs(dir), "props.conf"))
 	if err != nil {
 		return nil, err
 	}

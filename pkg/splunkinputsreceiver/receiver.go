@@ -91,10 +91,6 @@ func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, tra
 		if err != nil {
 			return nil, fmt.Errorf("failed to create receiver %q: %w", name, err)
 		}
-		if l == nil {
-			settings.Logger.Info("splunk_inputs: skipping unsupported stanza kind", zap.String("stanza", name))
-			continue
-		}
 		receivers = append(receivers, l)
 	}
 	return receivers, nil
@@ -118,7 +114,12 @@ func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next
 			Props:      props,
 		}, next)
 	}
-	return tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
+	l, err := tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
+	if l == nil && err == nil {
+		settings.Logger.Info("splunk_inputs: skipping unsupported stanza kind", zap.String("stanza", input.Configuration.Stanza.Name))
+		return nopInstance, nil
+	}
+	return l, err
 }
 
 var nopInstance = &nopReceiver{}
