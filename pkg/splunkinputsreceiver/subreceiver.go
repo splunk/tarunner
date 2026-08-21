@@ -129,8 +129,7 @@ func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, tra
 	var receivers []receiver.Logs
 	for _, input := range inputs {
 		name := input.Configuration.Stanza.Name
-		disabled := input.Configuration.Stanza.Params.Get("disabled")
-		if disabled != nil && disabled.Value == "1" {
+		if input.Configuration.Stanza.IsDisabled() {
 			settings.Logger.Info("splunk_inputs: skipping disabled stanza", zap.String("stanza", name))
 			continue
 		}

@@ -50,6 +50,12 @@ type Param struct {
 	Value string `xml:",innerxml"`
 }
 
+// IsDisabled reports whether the stanza has disabled=1.
+func (s *Stanza) IsDisabled() bool {
+	p := s.Params.Get("disabled")
+	return p != nil && p.Value == "1"
+}
+
 // ReadInput parses an inputs.conf payload. appDir is the app directory
 // (e.g. $SPLUNK_HOME/etc/apps/my_ta) stored on each stanza for use when
 // resolving relative script paths at execution time. Pass an empty string

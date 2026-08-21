@@ -44,8 +44,7 @@ import (
 func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, telemetrySettings component.TelemetrySettings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
-		disabled := input.Configuration.Stanza.Params.Get("disabled")
-		if disabled != nil && disabled.Value == "1" {
+		if input.Configuration.Stanza.IsDisabled() {
 			continue
 		}
 		l, err := CreateReceiver(ctx, baseDir, next, input, transforms, props, telemetrySettings)
