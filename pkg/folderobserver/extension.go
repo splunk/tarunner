@@ -67,11 +67,10 @@ func (l *folderLister) ListEndpoints() []observer.Endpoint {
 		if !entry.IsDir() {
 			continue
 		}
-		absPath := filepath.Join(l.path, entry.Name())
-		appConf := filepath.Join(absPath, "default", "app.conf")
-		if _, err := os.Stat(appConf); err != nil {
+		if !strings.HasPrefix(entry.Name(), "Splunk_TA") {
 			continue
 		}
+		absPath := filepath.Join(l.path, entry.Name())
 		l.logger.Info("folder_observer: discovered addon", zap.String("path", absPath))
 		endpoints = append(endpoints, observer.Endpoint{
 			ID:      observer.EndpointID(absPath),
