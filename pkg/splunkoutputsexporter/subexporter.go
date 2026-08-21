@@ -89,7 +89,7 @@ func (o factoryOptions) createLogsFunc(ctx context.Context, settings exporter.Se
 		return nil, fmt.Errorf("splunk_outputs: %w (base_dir: %s)", err, splunkHome)
 	}
 
-	exporters, err := o.createExporters(ctx, baseDir, outputs, settings)
+	exporters, err := o.createExporters(ctx, splunkHome, outputs, settings)
 	if err != nil {
 		return nil, fmt.Errorf("splunk_outputs: %w", err)
 	}
