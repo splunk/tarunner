@@ -13,6 +13,13 @@ import (
 	"github.com/splunk/tarunner/internal/conf"
 )
 
+func requireOutputParam(t *testing.T, output *conf.Output, name string) string {
+	t.Helper()
+	param := output.Configuration.Stanza.Params.Get(name)
+	require.NotNil(t, param)
+	return param.Value
+}
+
 func TestReadOutputs(t *testing.T) {
 	rootDir := filepath.Join("testdata", "outputs")
 	tests := []struct {
@@ -66,10 +73,19 @@ func TestReadOutputs(t *testing.T) {
 			output, err := HTTPOut(merged)
 			require.NoError(t, err)
 			require.NotNil(t, output)
-			assert.Equal(t, test.expectedToken, output.Token)
-			assert.Equal(t, test.expectedURI, output.URI)
+			assert.Equal(t, test.expectedToken, requireOutputParam(t, output, "httpEventCollectorToken"))
+			assert.Equal(t, test.expectedURI, requireOutputParam(t, output, "uri"))
 		})
 	}
+}
+
+func TestReadOutputGroups(t *testing.T) {
+	outputs, err := ReadOutputGroups(filepath.Join("testdata", "outputs", "no_httpout"))
+	require.NoError(t, err)
+	require.Len(t, outputs, 1)
+
+	assert.Equal(t, "tcpout", outputs[0].Configuration.Stanza.Name)
+	assert.Equal(t, "splunk:9997", requireOutputParam(t, &outputs[0], "server"))
 }
 
 func TestReadTransforms(t *testing.T) {

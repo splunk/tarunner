@@ -225,6 +225,16 @@ func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
 	return conf.ParseAndMergeConf(payloads)
 }
 
+// ReadOutputGroups merges outputs.conf across $SPLUNK_HOME using standard
+// Splunk precedence and returns every output stanza.
+func ReadOutputGroups(splunkHome string) ([]conf.Output, error) {
+	merged, err := ReadOutputs(splunkHome)
+	if err != nil {
+		return nil, err
+	}
+	return conf.OutputGroups(merged)
+}
+
 func HTTPOut(merged conf.ConfMap) (*conf.Output, error) {
 	return conf.HTTPOut(merged)
 }
@@ -235,14 +245,26 @@ func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings c
 	if err != nil {
 		return nil, err
 	}
+	return CreateOutputExporter(output, logger, telemetrySettings)
+}
+
+// CreateOutputExporter builds a logs exporter from one built-in output stanza.
+func CreateOutputExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
+	parsed, err := stanza.ParseOutputName(output.Configuration.Stanza.Name)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Kind != "httpout" {
+		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
+	}
 	return newHECExporter(output, logger, telemetrySettings)
 }
 
 func newHECExporter(o *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	f := splunkhecexporter.NewFactory()
 	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
-	cfg.Endpoint = o.URI
-	cfg.Token = configopaque.String(o.Token)
+	cfg.Endpoint = outputParam(o, "uri")
+	cfg.Token = configopaque.String(outputParam(o, "httpEventCollectorToken"))
 	cfg.TLS = configtls.ClientConfig{InsecureSkipVerify: true} // TODO: wire sslVerifyServerCert from outputs.conf
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -259,4 +281,11 @@ func newHECExporter(o *conf.Output, logger *zap.Logger, telemetrySettings compon
 		s.TelemetrySettings = telemetrySettings
 	}
 	return f.CreateLogs(context.Background(), s, cfg)
+}
+
+func outputParam(o *conf.Output, name string) string {
+	if param := o.Configuration.Stanza.Params.Get(name); param != nil {
+		return param.Value
+	}
+	return ""
 }
