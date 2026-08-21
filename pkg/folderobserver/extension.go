@@ -68,7 +68,11 @@ func (l *folderLister) ListEndpoints() []observer.Endpoint {
 			continue
 		}
 		absPath := filepath.Join(l.path, entry.Name())
-		l.logger.Info("folder_observer: discovered directory", zap.String("path", absPath))
+		appConf := filepath.Join(absPath, "default", "app.conf")
+		if _, err := os.Stat(appConf); err != nil {
+			continue
+		}
+		l.logger.Info("folder_observer: discovered addon", zap.String("path", absPath))
 		endpoints = append(endpoints, observer.Endpoint{
 			ID:      observer.EndpointID(absPath),
 			Target:  absPath,
