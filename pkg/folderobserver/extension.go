@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
@@ -67,7 +68,7 @@ func (l *folderLister) ListEndpoints() []observer.Endpoint {
 		if !entry.IsDir() {
 			continue
 		}
-		if !strings.HasPrefix(entry.Name(), "Splunk_TA") {
+		if !(strings.HasPrefix(entry.Name(), "Splunk_TA")) {
 			continue
 		}
 		absPath := filepath.Join(l.path, entry.Name())
