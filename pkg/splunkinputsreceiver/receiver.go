@@ -95,9 +95,7 @@ func (w *watchingReceiver) Start(ctx context.Context, host component.Host) error
 		if !ok {
 			return fmt.Errorf("splunk_inputs: extension %q does not implement observer.Observable", obsID)
 		}
-		w.settings.Logger.Info("splunk_inputs: calling ListAndWatch", zap.String("observer", obsID.String()))
 		obs.ListAndWatch(w)
-		w.settings.Logger.Info("splunk_inputs: ListAndWatch returned", zap.String("observer", obsID.String()))
 	}
 	return nil
 }
@@ -129,7 +127,6 @@ func (w *watchingReceiver) OnAdd(endpoints []observer.Endpoint) {
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
-		w.settings.Logger.Info("splunk_inputs: read inputs", zap.String("path", path), zap.Int("count", len(inputs)))
 		transforms, err := tabuilder.ReadTransforms(path)
 		if err != nil {
 			w.settings.Logger.Error("splunk_inputs: failed to read transforms for endpoint",
@@ -148,7 +145,6 @@ func (w *watchingReceiver) OnAdd(endpoints []observer.Endpoint) {
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
-		w.settings.Logger.Info("splunk_inputs: created receivers for endpoint", zap.String("path", path), zap.Int("count", len(receivers)))
 		r := packReceivers(receivers)
 		if err := r.Start(w.ctx, w.host); err != nil {
 			w.settings.Logger.Error("splunk_inputs: failed to start receiver for endpoint",

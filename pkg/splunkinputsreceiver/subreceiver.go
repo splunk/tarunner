@@ -134,7 +134,6 @@ func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, tra
 			settings.Logger.Info("splunk_inputs: skipping disabled stanza", zap.String("stanza", name))
 			continue
 		}
-		settings.Logger.Info("splunk_inputs: creating receiver for stanza", zap.String("stanza", name))
 		l, err := o.createReceiver(ctx, baseDir, next, input, transforms, props, settings)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create receiver %q: %w", name, err)

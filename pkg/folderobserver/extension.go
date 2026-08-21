@@ -79,6 +79,5 @@ func (l *folderLister) ListEndpoints() []observer.Endpoint {
 			Details: &folderDetails{Name: entry.Name(), Path: absPath},
 		})
 	}
-	l.logger.Info("folder_observer: scan complete", zap.String("path", l.path), zap.Int("count", len(endpoints)))
 	return endpoints
 }
