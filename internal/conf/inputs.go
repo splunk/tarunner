@@ -5,10 +5,6 @@ package conf
 
 import (
 	"encoding/xml"
-	"fmt"
-	"path/filepath"
-	"runtime"
-	"strings"
 
 	"gopkg.in/ini.v1"
 )
@@ -45,6 +41,7 @@ func (p Params) Get(name string) *Param {
 type Stanza struct {
 	Name   string `xml:"name,attr"`
 	App    string `xml:"app,attr"`
+	AppDir string `xml:"-"` // app directory used to resolve relative script paths at execution time
 	Params Params `xml:"param"`
 }
 
@@ -54,8 +51,9 @@ type Param struct {
 }
 
 // ReadInput parses an inputs.conf payload. appDir is the app directory
-// (e.g. $SPLUNK_HOME/etc/apps/my_ta) used to resolve relative script paths
-// to absolute paths at parse time. Pass an empty string to skip resolution.
+// (e.g. $SPLUNK_HOME/etc/apps/my_ta) stored on each stanza for use when
+// resolving relative script paths at execution time. Pass an empty string
+// when the app directory is unknown or irrelevant.
 func ReadInput(payload []byte, appDir string) ([]Input, error) {
 	f, err := ini.Load(payload)
 	if err != nil {
@@ -67,15 +65,12 @@ func ReadInput(payload []byte, appDir string) ([]Input, error) {
 		if section.Name() == ini.DefaultSection {
 			continue // disregard default section. We need a stanza per input.
 		}
-		name := section.Name()
-		if appDir != "" {
-			name = resolveInputPath(name, appDir)
-		}
 		i := Input{
 			Configuration: Configuration{
 				Stanza: Stanza{
-					Name:   name,
+					Name:   section.Name(),
 					App:    appName,
+					AppDir: appDir,
 					Params: make([]Param, len(section.Keys())),
 				},
 			},
@@ -93,39 +88,6 @@ func ReadInput(payload []byte, appDir string) ([]Input, error) {
 	}
 
 	return result, nil
-}
-
-// resolveInputPath rewrites a stanza name's relative path component to an
-// absolute path using appDir. Only script:// and bare (scripted) stanzas
-// are rewritten; monitor://, tcp://, udp://, wineventlog:// are left as-is
-// since their targets are not relative to the app directory.
-func resolveInputPath(name, appDir string) string {
-	switch {
-	case hasScheme(name, "script"):
-		rel := name[len("script://"):]
-		return "script://" + absPath(appDir, rel)
-	case hasScheme(name, "monitor"), hasScheme(name, "tcp"), hasScheme(name, "udp"), hasScheme(name, "wineventlog"), hasScheme(name, "batch"):
-		return name
-	default:
-		// bare scripted input: name is the script filename
-		abs := absPath(appDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), name))
-		return abs
-	}
-}
-
-func hasScheme(name, scheme string) bool {
-	return strings.HasPrefix(strings.ToLower(name), scheme+"://")
-}
-
-func absPath(appDir, rel string) string {
-	if filepath.IsAbs(rel) {
-		return rel
-	}
-	abs, err := filepath.Abs(filepath.Join(appDir, rel))
-	if err != nil {
-		return filepath.Join(appDir, rel)
-	}
-	return abs
 }
 
 // MergeInputs merges multiple slices of inputs, with later slices taking

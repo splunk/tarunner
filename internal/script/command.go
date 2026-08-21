@@ -18,6 +18,13 @@ func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// Use AppDir from the stanza when available; it points to the specific app
+	// directory the conf was parsed from, which is more accurate than baseDir
+	// when multiple apps are layered together.
+	resolveDir := baseDir
+	if input.Configuration.Stanza.AppDir != "" {
+		resolveDir = input.Configuration.Stanza.AppDir
+	}
 	switch parsed.Kind {
 	case "monitor", "batch":
 		return parsed.Target, nil
@@ -25,12 +32,12 @@ func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
 		if filepath.IsAbs(parsed.Target) {
 			return parsed.Target, nil
 		}
-		return GetPath(baseDir, parsed.Target)
+		return GetPath(resolveDir, parsed.Target)
 	case "":
 		if filepath.IsAbs(parsed.Target) {
 			return parsed.Target, nil
 		}
-		return GetPath(baseDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), parsed.Target))
+		return GetPath(resolveDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), parsed.Target))
 	default:
 		return "", fmt.Errorf("unknown scheme %q", parsed.Kind)
 	}
