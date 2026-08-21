@@ -5,8 +5,10 @@ package scriptedinput
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
@@ -86,19 +88,24 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 				case <-si.doneChan:
 					return
 				default:
-					si.execute(baseDir, input)
+					if !si.execute(baseDir, input) {
+						return
+					}
 				}
 			}
 		}()
 	} else {
 		interval := time.Duration(intervalS) * time.Second
 		go func() {
-			si.execute(baseDir, input)
-
+			if !si.execute(baseDir, input) {
+				return
+			}
 			for {
 				select {
 				case <-time.After(interval):
-					si.execute(baseDir, input)
+					if !si.execute(baseDir, input) {
+						return
+					}
 				case <-si.doneChan:
 					return
 				}
@@ -108,10 +115,31 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 	return true, nil
 }
 
-func (si *ScriptedInput) execute(baseDir string, input conf.Input) {
+// execute runs the script and returns false if the error is permanent
+// (e.g. exec format error) and the input should not be retried.
+func (si *ScriptedInput) execute(baseDir string, input conf.Input) bool {
 	if err := si._execute(baseDir, input); err != nil {
-		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.String("error", err.Error()))
+		if isPermanentExecError(err) {
+			si.logger.Warn("Skipping input permanently due to exec error", zap.String("input", input.Configuration.Stanza.Name), zap.Error(err))
+			return false
+		}
+		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.Error(err))
 	}
+	return true
+}
+
+func isPermanentExecError(err error) bool {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+			return status.Signal() == syscall.SIGILL
+		}
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return errors.Is(pathErr.Err, syscall.ENOEXEC) || errors.Is(pathErr.Err, syscall.EACCES)
+	}
+	return false
 }
 
 func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
