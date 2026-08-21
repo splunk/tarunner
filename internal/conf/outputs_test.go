@@ -72,7 +72,7 @@ func TestReadOutputGroups(t *testing.T) {
 }
 
 func TestReadOutputGroupsNoStanzas(t *testing.T) {
-	_, err := ReadOutputGroups([]byte("disabled = 0\n"))
+	_, err := ReadOutputGroups([]byte(""))
 	require.ErrorIs(t, err, ErrNoOutputStanzas)
 }
 

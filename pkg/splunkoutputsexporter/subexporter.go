@@ -76,17 +76,17 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings exporter.Settings, config component.Config) (exporter.Logs, error) {
 	cfg := config.(Config)
 
-	baseDir := cfg.BaseDir
-	if baseDir == "" {
-		baseDir = os.Getenv("SPLUNK_HOME")
+	splunkHome := cfg.BaseDir
+	if splunkHome == "" {
+		splunkHome = os.Getenv("SPLUNK_HOME")
 	}
-	if baseDir == "" {
-		return nil, fmt.Errorf("splunk_outputs: path is not set and SPLUNK_HOME is not defined")
+	if splunkHome == "" {
+		return nil, fmt.Errorf("splunk_outputs: base_dir is not set and SPLUNK_HOME is not defined")
 	}
 
-	outputs, err := tabuilder.ReadOutputGroups(baseDir)
+	outputs, err := tabuilder.ReadOutputGroups(splunkHome)
 	if err != nil {
-		return nil, fmt.Errorf("splunk_outputs: %w (base_dir: %s)", err, baseDir)
+		return nil, fmt.Errorf("splunk_outputs: %w (base_dir: %s)", err, splunkHome)
 	}
 
 	exporters, err := o.createExporters(ctx, baseDir, outputs, settings)
