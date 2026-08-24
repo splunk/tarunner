@@ -13,8 +13,6 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer"
-
 	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/stanza"
 	"github.com/splunk/tarunner/internal/tabuilder"
@@ -87,19 +85,6 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
 
-	if len(cfg.WatchObservers) > 0 {
-		if cfg.BaseDir != "" || cfg.Path != "" {
-			return nil, fmt.Errorf("splunk_inputs: watch_observers is mutually exclusive with base_dir and path")
-		}
-		return &watchingReceiver{
-			cfg:      cfg,
-			settings: settings,
-			logs:     logs,
-			opts:     o,
-			active:   make(map[observer.EndpointID]receiver.Logs),
-		}, nil
-	}
-
 	taDir, err := resolveTADir(cfg)
 	if err != nil {
 		return nil, err
@@ -162,8 +147,7 @@ func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next
 	}
 	l, err := tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
 	if l == nil && err == nil {
-		settings.Logger.Info("splunk_inputs: skipping unsupported stanza kind", zap.String("stanza", input.Configuration.Stanza.Name))
-		return nopInstance, nil
+		return nil, fmt.Errorf("unsupported scheme %q", scheme)
 	}
 	return l, err
 }

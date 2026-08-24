@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkinputsreceiver"
 )
@@ -137,7 +138,8 @@ func (nopConsumer) ConsumeLogs(context.Context, plog.Logs) error {
 
 func newReceiverSettings() receiver.Settings {
 	return receiver.Settings{
-		ID: component.MustNewID("splunk_inputs"),
+		ID:                component.MustNewID("splunk_inputs"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
 	}
 }
 
