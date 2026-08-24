@@ -20,25 +20,25 @@ import (
 )
 
 func TestWithSubReceiverRegistersCustomScheme(t *testing.T) {
-	baseDir := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
+	path := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{Path: path}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
-	require.Equal(t, baseDir, fake.request.BaseDir)
+	require.Equal(t, path, fake.request.BaseDir)
 	require.Equal(t, "/thing", fake.request.Path)
 	require.Equal(t, "custom:///thing", fake.request.Input.Configuration.Stanza.Name)
 }
 
 func TestWithSubReceiverOverridesBuiltInAndHandlesEmptySchemeAsScript(t *testing.T) {
-	baseDir := writeTA(t, "[modinput]\ninterval = -1\n")
+	path := writeTA(t, "[modinput]\ninterval = -1\n")
 	fake := &fakeSubReceiverFactory{scheme: "script"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{Path: path}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
@@ -47,11 +47,11 @@ func TestWithSubReceiverOverridesBuiltInAndHandlesEmptySchemeAsScript(t *testing
 }
 
 func TestWithSubReceiverMatchesNormalizedScheme(t *testing.T) {
-	baseDir := writeTA(t, "[Custom://thing]\n")
+	path := writeTA(t, "[Custom://thing]\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{Path: path}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
@@ -60,34 +60,34 @@ func TestWithSubReceiverMatchesNormalizedScheme(t *testing.T) {
 }
 
 func TestWithSubReceiverRejectsUnsupportedScheme(t *testing.T) {
-	baseDir := writeTA(t, "[unsupported://thing]\n")
+	path := writeTA(t, "[unsupported://thing]\n")
 
 	factory := splunkinputsreceiver.NewFactory()
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{Path: path}, nopConsumer{})
 	require.ErrorContains(t, err, `unsupported scheme "unsupported"`)
 	require.Nil(t, rcvr)
 }
 
 func TestWithSubReceiverSkipsDisabledCustomStanza(t *testing.T) {
-	baseDir := writeTA(t, "[custom:///thing]\ndisabled = 1\n")
+	path := writeTA(t, "[custom:///thing]\ndisabled = 1\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{Path: path}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.False(t, fake.called)
 }
 
 func TestWithSubReceiverRequestIncludesPropsAndTransforms(t *testing.T) {
-	baseDir := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
-	defaultDir := filepath.Join(baseDir, "default")
+	path := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
+	defaultDir := filepath.Join(path, "default")
 	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "props.conf"), []byte("[custom]\nTRANSFORMS-routing = route\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "transforms.conf"), []byte("[route]\nREGEX = ^(.*)$\nFORMAT = $1\n"), 0o600))
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{Path: path}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
@@ -145,9 +145,9 @@ func newReceiverSettings() receiver.Settings {
 
 func writeTA(t *testing.T, inputsConf string) string {
 	t.Helper()
-	baseDir := t.TempDir()
-	defaultDir := filepath.Join(baseDir, "default")
+	path := t.TempDir()
+	defaultDir := filepath.Join(path, "default")
 	require.NoError(t, os.Mkdir(defaultDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "inputs.conf"), []byte(inputsConf), 0o600))
-	return baseDir
+	return path
 }
