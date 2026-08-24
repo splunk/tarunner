@@ -162,9 +162,22 @@ func taDirs(taDir string) []string {
 	}
 }
 
-// isSingleTA returns true when the path looks like a single TA directory
+// taDirsWithSystem returns the conf search path for a single TA directory merged
+// with system-level config from splunkHome, following Splunk precedence:
+// system default → TA default → TA local → system local.
+func taDirsWithSystem(splunkHome, taDir string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	return []string{
+		filepath.Join(etcDir, "system", "default"),
+		filepath.Join(taDir, "default"),
+		filepath.Join(taDir, "local"),
+		filepath.Join(etcDir, "system", "local"),
+	}
+}
+
+// IsSingleTA returns true when the path looks like a single TA directory
 // (has a default/ or local/ subdirectory but no etc/apps/ layout).
-func isSingleTA(path string) bool {
+func IsSingleTA(path string) bool {
 	_, errEtc := os.Stat(filepath.Join(path, "etc", "apps"))
 	_, errDefault := os.Stat(filepath.Join(path, "default"))
 	_, errLocal := os.Stat(filepath.Join(path, "local"))
@@ -174,10 +187,20 @@ func isSingleTA(path string) bool {
 }
 
 func confDirs(path string) []string {
-	if isSingleTA(path) {
+	if IsSingleTA(path) {
 		return taDirs(path)
 	}
 	return splunkHomeDirs(path)
+}
+
+// confDirsWithSystem returns the conf search path for a single TA directory
+// combined with system-level config. If splunkHome is empty, falls back to
+// taDirs (no system config).
+func confDirsWithSystem(splunkHome, taDir string) []string {
+	if splunkHome == "" {
+		return taDirs(taDir)
+	}
+	return taDirsWithSystem(splunkHome, taDir)
 }
 
 func readConfFiles(paths []string) ([][]byte, error) {
@@ -195,12 +218,26 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ReadInputs discovers and merges inputs.conf files from dir using standard
-// Splunk precedence. dir may be a Splunk home or a single TA directory.
-// Returns nil (no error) when absent.
-func ReadInputs(dir string) ([]conf.Input, error) {
+// ConfDirs returns the conf search path for dir, auto-detecting whether it is
+// a single TA directory or a full Splunk home.
+func ConfDirs(dir string) []string {
+	return confDirs(dir)
+}
+
+// ConfDirsWithSystem returns the conf search path for a single TA directory
+// combined with system-level config from splunkHome, following Splunk
+// precedence: system default → TA default → TA local → system local.
+// If splunkHome is empty, only the TA's own default/local are included.
+func ConfDirsWithSystem(splunkHome, taDir string) []string {
+	return confDirsWithSystem(splunkHome, taDir)
+}
+
+// ReadInputs discovers and merges inputs.conf files from the given search
+// directories. Use ConfDirs or ConfDirsWithSystem to build the dirs slice.
+// Returns nil (no error) when no inputs.conf files are found.
+func ReadInputs(dirs []string) ([]conf.Input, error) {
 	var layers [][]conf.Input
-	for _, path := range confFilePaths(confDirs(dir), "inputs.conf") {
+	for _, path := range confFilePaths(dirs, "inputs.conf") {
 		b, err := os.ReadFile(path)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -218,10 +255,10 @@ func ReadInputs(dir string) ([]conf.Input, error) {
 	return conf.MergeInputs(layers), nil
 }
 
-// ReadTransforms discovers and merges transforms.conf files from dir using
-// standard Splunk precedence. Returns nil (no error) when absent.
-func ReadTransforms(dir string) ([]conf.Transform, error) {
-	payloads, err := readConfFiles(confFilePaths(confDirs(dir), "transforms.conf"))
+// ReadTransforms discovers and merges transforms.conf files from the given
+// search directories. Returns nil (no error) when absent.
+func ReadTransforms(dirs []string) ([]conf.Transform, error) {
+	payloads, err := readConfFiles(confFilePaths(dirs, "transforms.conf"))
 	if err != nil {
 		return nil, err
 	}
@@ -236,10 +273,10 @@ func ReadTransforms(dir string) ([]conf.Transform, error) {
 	return conf.MergeTransforms(layers), nil
 }
 
-// ReadProps discovers and merges props.conf files from dir using standard
-// Splunk precedence. Returns nil (no error) when absent.
-func ReadProps(dir string) ([]conf.Prop, error) {
-	payloads, err := readConfFiles(confFilePaths(confDirs(dir), "props.conf"))
+// ReadProps discovers and merges props.conf files from the given search
+// directories. Returns nil (no error) when absent.
+func ReadProps(dirs []string) ([]conf.Prop, error) {
+	payloads, err := readConfFiles(confFilePaths(dirs, "props.conf"))
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +294,7 @@ func ReadProps(dir string) ([]conf.Prop, error) {
 // ReadOutputs merges outputs.conf across $SPLUNK_HOME using standard Splunk
 // precedence. Use HTTPOut (or future TCPOut, etc.) to extract a specific type.
 func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
-	payloads, err := readConfFiles(confFilePaths(confDirs(splunkHome), "outputs.conf"))
+	payloads, err := readConfFiles(confFilePaths(ConfDirs(splunkHome), "outputs.conf"))
 	if err != nil {
 		return nil, err
 	}

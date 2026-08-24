@@ -36,15 +36,16 @@ func Run(baseDir string, cfg *config.Config) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := tabuilder.ReadInputs(baseDir)
+	dirs := tabuilder.ConfDirs(baseDir)
+	inputs, err := tabuilder.ReadInputs(dirs)
 	if err != nil {
 		return nil, err
 	}
-	transforms, err := tabuilder.ReadTransforms(baseDir)
+	transforms, err := tabuilder.ReadTransforms(dirs)
 	if err != nil {
 		return nil, err
 	}
-	props, err := tabuilder.ReadProps(baseDir)
+	props, err := tabuilder.ReadProps(dirs)
 	if err != nil {
 		return nil, err
 	}

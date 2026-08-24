@@ -85,25 +85,28 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
 
-	taDir, err := resolveTADir(cfg)
+	if cfg.Path == "" {
+		return nil, fmt.Errorf("splunk_inputs: path is required")
+	}
+	dirs := tabuilder.ConfDirs(cfg.Path)
+	if tabuilder.IsSingleTA(cfg.Path) {
+		splunkHome := resolveSplunkHome(cfg.Path)
+		dirs = tabuilder.ConfDirsWithSystem(splunkHome, cfg.Path)
+	}
+	inputs, err := tabuilder.ReadInputs(dirs)
+	if err != nil {
+		return nil, err
+	}
+	transforms, err := tabuilder.ReadTransforms(dirs)
+	if err != nil {
+		return nil, err
+	}
+	props, err := tabuilder.ReadProps(dirs)
 	if err != nil {
 		return nil, err
 	}
 
-	inputs, err := tabuilder.ReadInputs(taDir)
-	if err != nil {
-		return nil, err
-	}
-	transforms, err := tabuilder.ReadTransforms(taDir)
-	if err != nil {
-		return nil, err
-	}
-	props, err := tabuilder.ReadProps(taDir)
-	if err != nil {
-		return nil, err
-	}
-
-	receivers, err := o.createReceivers(ctx, inputs, transforms, props, taDir, logs, settings)
+	receivers, err := o.createReceivers(ctx, inputs, transforms, props, cfg.Path, logs, settings)
 	if err != nil {
 		return nil, err
 	}

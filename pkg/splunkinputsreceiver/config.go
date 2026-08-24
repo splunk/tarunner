@@ -4,14 +4,8 @@
 package splunkinputsreceiver
 
 type Config struct {
-	// BaseDir is the Splunk installation root ($SPLUNK_HOME). inputs.conf,
-	// transforms.conf, and props.conf are discovered across etc/apps/* using
-	// standard Splunk precedence. Overrides $SPLUNK_HOME when set.
-	// Mutually exclusive with Path.
-	BaseDir string `mapstructure:"base_dir"`
-
-	// Path is the absolute path to a single TA directory. When set, only that
-	// directory's inputs.conf, transforms.conf, and props.conf are read with no
-	// btool-style layering. Mutually exclusive with BaseDir.
+	// Path is the absolute path to a single TA directory
+	// (e.g. /opt/splunk/etc/apps/Splunk_TA_nix).
+	// The Splunk home is derived automatically by walking up the directory tree.
 	Path string `mapstructure:"path"`
 }

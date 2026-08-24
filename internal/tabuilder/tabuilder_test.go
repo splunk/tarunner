@@ -102,7 +102,7 @@ func TestReadTransforms(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			transforms, err := ReadTransforms(test.splunkHome)
+			transforms, err := ReadTransforms(ConfDirs(test.splunkHome))
 			require.NoError(t, err)
 			require.Len(t, transforms, 1)
 			require.Equal(t, test.expectedName, transforms[0].Name)

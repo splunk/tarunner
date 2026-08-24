@@ -6,8 +6,8 @@ package splunkinputsreceiver
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
+	"path/filepath"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
@@ -53,19 +53,14 @@ func packReceivers(receivers []receiver.Logs) receiver.Logs {
 	}
 }
 
-// resolveTADir returns the directory to read conf files from.
-// When Path is set, it is used directly (single-TA mode).
-// Otherwise base_dir or $SPLUNK_HOME is used for the full btool-style walk.
-func resolveTADir(cfg Config) (string, error) {
-	if cfg.Path != "" {
-		return cfg.Path, nil
+// resolveSplunkHome derives the Splunk installation root from a TA path.
+// For a standard install the TA sits at $SPLUNK_HOME/etc/apps/<TA>, so the
+// home is three levels up. If the derived path does not exist, $SPLUNK_HOME
+// is used as a fallback.
+func resolveSplunkHome(taPath string) string {
+	derived := filepath.Dir(filepath.Dir(filepath.Dir(taPath)))
+	if _, err := os.Stat(derived); err == nil {
+		return derived
 	}
-	splunkHome := cfg.BaseDir
-	if splunkHome == "" {
-		splunkHome = os.Getenv("SPLUNK_HOME")
-	}
-	if splunkHome == "" {
-		return "", fmt.Errorf("splunk_inputs: path is not set, base_dir is not set, and SPLUNK_HOME is not defined")
-	}
-	return splunkHome, nil
+	return os.Getenv("SPLUNK_HOME")
 }
