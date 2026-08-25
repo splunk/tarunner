@@ -6,6 +6,8 @@ package splunkinputsreceiver
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -85,32 +87,49 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
 
-	if cfg.Path == "" {
-		return nil, fmt.Errorf("splunk_inputs: path is required")
-	}
-	dirs := tabuilder.ConfDirs(cfg.Path)
-	if tabuilder.IsSingleTA(cfg.Path) {
-		splunkHome := resolveSplunkHome(cfg.Path)
-		dirs = tabuilder.ConfDirsWithSystem(splunkHome, cfg.Path)
-	}
-	inputs, err := tabuilder.ReadInputs(dirs)
-	if err != nil {
-		return nil, err
-	}
-	transforms, err := tabuilder.ReadTransforms(dirs)
-	if err != nil {
-		return nil, err
-	}
-	props, err := tabuilder.ReadProps(dirs)
+	splunkHome, err := resolveSplunkHome(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	receivers, err := o.createReceivers(ctx, inputs, transforms, props, cfg.Path, logs, settings)
+	taDirs, err := discoverTAs(splunkHome)
 	if err != nil {
 		return nil, err
 	}
-	return packReceivers(receivers), nil
+
+	var allReceivers []receiver.Logs
+	for _, taDir := range taDirs {
+		dirs := tabuilder.ConfDirsWithSystem(splunkHome, taDir)
+		inputs, err := tabuilder.ReadInputs(dirs)
+		if err != nil {
+			return nil, err
+		}
+		transforms, err := tabuilder.ReadTransforms(dirs)
+		if err != nil {
+			return nil, err
+		}
+		props, err := tabuilder.ReadProps(dirs)
+		if err != nil {
+			return nil, err
+		}
+		receivers, err := o.createReceivers(ctx, inputs, transforms, props, taDir, logs, settings)
+		if err != nil {
+			return nil, err
+		}
+		allReceivers = append(allReceivers, receivers...)
+	}
+	return packReceivers(allReceivers), nil
+}
+
+// discoverTAs returns all direct child directories under $SPLUNK_HOME/etc/apps.
+func discoverTAs(splunkHome string) ([]string, error) {
+	appsDir := filepath.Join(splunkHome, "etc", "apps")
+	entries, err := filepath.Glob(filepath.Join(appsDir, "*"))
+	if err != nil {
+		return nil, fmt.Errorf("splunk_inputs: failed to scan %s: %w", appsDir, err)
+	}
+	sort.Strings(entries)
+	return entries, nil
 }
 
 func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, transforms []Transform, props []Prop, baseDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
