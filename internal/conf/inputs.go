@@ -98,7 +98,8 @@ func ReadInput(payload []byte, appDir string) ([]Input, error) {
 
 // MergeInputs merges multiple slices of inputs, with later slices taking
 // precedence over earlier ones (local/ wins over default/).
-// Stanzas are keyed by name; the last definition of a stanza wins entirely.
+// Stanzas are keyed by name; params are merged key by key so that a later
+// layer only overrides the keys it explicitly sets.
 func MergeInputs(layers [][]Input) []Input {
 	seen := make(map[string]int)
 	var result []Input
@@ -106,7 +107,7 @@ func MergeInputs(layers [][]Input) []Input {
 		for _, input := range layer {
 			name := input.Configuration.Stanza.Name
 			if idx, ok := seen[name]; ok {
-				result[idx] = input
+				result[idx] = mergeInput(result[idx], input)
 			} else {
 				seen[name] = len(result)
 				result = append(result, input)
@@ -114,6 +115,28 @@ func MergeInputs(layers [][]Input) []Input {
 		}
 	}
 	return result
+}
+
+// mergeInput merges override into base at the param level.
+// Keys present in override replace the same key in base; keys only in base
+// are preserved.
+func mergeInput(base, override Input) Input {
+	merged := base
+	params := make(map[string]int, len(base.Configuration.Stanza.Params))
+	mergedParams := append([]Param{}, base.Configuration.Stanza.Params...)
+	for i, p := range mergedParams {
+		params[p.Name] = i
+	}
+	for _, p := range override.Configuration.Stanza.Params {
+		if idx, ok := params[p.Name]; ok {
+			mergedParams[idx] = p
+		} else {
+			params[p.Name] = len(mergedParams)
+			mergedParams = append(mergedParams, p)
+		}
+	}
+	merged.Configuration.Stanza.Params = mergedParams
+	return merged
 }
 
 func (i *Input) ToXML() ([]byte, error) {

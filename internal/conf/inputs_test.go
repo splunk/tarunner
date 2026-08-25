@@ -112,6 +112,22 @@ func TestTwoInputs(t *testing.T) {
 	}}, res)
 }
 
+func TestMergeInputsPartialOverride(t *testing.T) {
+	base := []Input{{Configuration: Configuration{Stanza: Stanza{
+		Name:   "monitor:///var/log/syslog",
+		Params: Params{{Name: "sourcetype", Value: "syslog"}, {Name: "index", Value: "main"}},
+	}}}}
+	override := []Input{{Configuration: Configuration{Stanza: Stanza{
+		Name:   "monitor:///var/log/syslog",
+		Params: Params{{Name: "index", Value: "override"}},
+	}}}}
+
+	merged := MergeInputs([][]Input{base, override})
+	require.Len(t, merged, 1)
+	assert.Equal(t, "syslog", merged[0].Configuration.Stanza.Params.Get("sourcetype").Value)
+	assert.Equal(t, "override", merged[0].Configuration.Stanza.Params.Get("index").Value)
+}
+
 func TestToXML(t *testing.T) {
 	testStr := `<?xml version="1.0" encoding="UTF-8"?>
 <Input>
