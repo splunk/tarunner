@@ -154,14 +154,6 @@ func splunkHomeDirs(splunkHome string) []string {
 	return dirs
 }
 
-// taDirs returns the conf search path for a single TA directory (default/ then local/).
-func taDirs(taDir string) []string {
-	return []string{
-		filepath.Join(taDir, "default"),
-		filepath.Join(taDir, "local"),
-	}
-}
-
 // taDirsWithSystem returns the conf search path for a single TA directory merged
 // with system-level config from splunkHome, following Splunk precedence:
 // system default → TA default → TA local → system local.
@@ -173,34 +165,6 @@ func taDirsWithSystem(splunkHome, taDir string) []string {
 		filepath.Join(taDir, "local"),
 		filepath.Join(etcDir, "system", "local"),
 	}
-}
-
-// IsSingleTA returns true when the path looks like a single TA directory
-// (has a default/ or local/ subdirectory but no etc/apps/ layout).
-func IsSingleTA(path string) bool {
-	_, errEtc := os.Stat(filepath.Join(path, "etc", "apps"))
-	_, errDefault := os.Stat(filepath.Join(path, "default"))
-	_, errLocal := os.Stat(filepath.Join(path, "local"))
-	hasEtcApps := errEtc == nil
-	hasTA := errDefault == nil || errLocal == nil
-	return hasTA && !hasEtcApps
-}
-
-func confDirs(path string) []string {
-	if IsSingleTA(path) {
-		return taDirs(path)
-	}
-	return splunkHomeDirs(path)
-}
-
-// confDirsWithSystem returns the conf search path for a single TA directory
-// combined with system-level config. If splunkHome is empty, falls back to
-// taDirs (no system config).
-func confDirsWithSystem(splunkHome, taDir string) []string {
-	if splunkHome == "" {
-		return taDirs(taDir)
-	}
-	return taDirsWithSystem(splunkHome, taDir)
 }
 
 func readConfFiles(paths []string) ([][]byte, error) {
@@ -218,18 +182,17 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ConfDirs returns the conf search path for dir, auto-detecting whether it is
-// a single TA directory or a full Splunk home.
-func ConfDirs(dir string) []string {
-	return confDirs(dir)
+// ConfDirs returns the conf search path for a Splunk home directory, following
+// standard Splunk precedence across all apps.
+func ConfDirs(splunkHome string) []string {
+	return splunkHomeDirs(splunkHome)
 }
 
 // ConfDirsWithSystem returns the conf search path for a single TA directory
 // combined with system-level config from splunkHome, following Splunk
 // precedence: system default → TA default → TA local → system local.
-// If splunkHome is empty, only the TA's own default/local are included.
 func ConfDirsWithSystem(splunkHome, taDir string) []string {
-	return confDirsWithSystem(splunkHome, taDir)
+	return taDirsWithSystem(splunkHome, taDir)
 }
 
 // ReadInputs discovers and merges inputs.conf files from the given search
