@@ -5,10 +5,8 @@ package scriptedinput
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
@@ -65,17 +63,17 @@ func (si *ScriptedInput) scheduleInput(baseDir string, input conf.Input) (bool, 
 }
 
 func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input) (bool, error) {
-	if input.Configuration.Stanza.IsDisabled() {
-		return false, nil
-	}
-	intervalS := 3600.0
+	intervalS := 3600
 	for _, p := range input.Configuration.Stanza.Params {
 		if p.Name == "interval" {
 			var err error
-			intervalS, err = strconv.ParseFloat(p.Value, 64)
+			intervalS, err = strconv.Atoi(p.Value)
 			if err != nil {
 				return false, err
 			}
+		}
+		if p.Name == "disabled" && p.Value == "1" {
+			return false, nil
 		}
 	}
 	if intervalS == -1 {
@@ -88,24 +86,19 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 				case <-si.doneChan:
 					return
 				default:
-					if !si.execute(baseDir, input) {
-						return
-					}
+					si.execute(baseDir, input)
 				}
 			}
 		}()
 	} else {
-		interval := time.Duration(intervalS * float64(time.Second))
+		interval := time.Duration(intervalS) * time.Second
 		go func() {
-			if !si.execute(baseDir, input) {
-				return
-			}
+			si.execute(baseDir, input)
+
 			for {
 				select {
 				case <-time.After(interval):
-					if !si.execute(baseDir, input) {
-						return
-					}
+					si.execute(baseDir, input)
 				case <-si.doneChan:
 					return
 				}
@@ -115,31 +108,10 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 	return true, nil
 }
 
-// execute runs the script and returns false if the error is permanent
-// (e.g. exec format error) and the input should not be retried.
-func (si *ScriptedInput) execute(baseDir string, input conf.Input) bool {
+func (si *ScriptedInput) execute(baseDir string, input conf.Input) {
 	if err := si._execute(baseDir, input); err != nil {
-		if isPermanentExecError(err) {
-			si.logger.Warn("Skipping input permanently due to exec error", zap.String("input", input.Configuration.Stanza.Name), zap.Error(err))
-			return false
-		}
-		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.Error(err))
+		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.String("error", err.Error()))
 	}
-	return true
-}
-
-func isPermanentExecError(err error) bool {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
-			return status.Signal() == syscall.SIGILL
-		}
-	}
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
-		return errors.Is(pathErr.Err, syscall.ENOEXEC) || errors.Is(pathErr.Err, syscall.EACCES)
-	}
-	return false
 }
 
 func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
