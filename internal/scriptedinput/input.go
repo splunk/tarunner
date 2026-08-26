@@ -63,12 +63,13 @@ func (si *ScriptedInput) scheduleInput(baseDir string, input conf.Input) (bool, 
 }
 
 func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input) (bool, error) {
-	intervalS := 3600
+	intervalS := 3600.0
 	for _, p := range input.Configuration.Stanza.Params {
 		if p.Name == "interval" {
 			var err error
-			intervalS, err = strconv.Atoi(p.Value)
+			intervalS, err = strconv.ParseFloat(p.Value, 64)
 			if err != nil {
+				// TODO: cron schedule support not yet implemented
 				return false, err
 			}
 		}
@@ -91,7 +92,7 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 			}
 		}()
 	} else {
-		interval := time.Duration(intervalS) * time.Second
+		interval := time.Duration(intervalS * float64(time.Second))
 		go func() {
 			si.execute(baseDir, input)
 

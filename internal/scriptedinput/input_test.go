@@ -43,6 +43,11 @@ func Test_ScriptedInput(t *testing.T) {
 			"-1",
 			false,
 		},
+		{
+			"float_interval",
+			"60.0",
+			true,
+		},
 	}
 
 	for _, test := range tests {
