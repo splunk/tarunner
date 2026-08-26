@@ -136,8 +136,7 @@ func confFilePaths(dirs []string, filename string) []string {
 	return paths
 }
 
-// DiscoverTAs returns all direct child directories under splunkHome/etc/apps
-// whose name starts with "splunk_ta_" (case-insensitive).
+// DiscoverTAs returns splunk_ta_* directories under splunkHome/etc/apps.
 func DiscoverTAs(splunkHome string) ([]string, error) {
 	appsDir := filepath.Join(splunkHome, "etc", "apps")
 	entries, err := os.ReadDir(appsDir)
@@ -175,9 +174,6 @@ func splunkHomeDirs(splunkHome string) []string {
 	return dirs
 }
 
-// taDirsWithSystem returns the conf search path for a single TA directory merged
-// with system-level config from splunkHome, following Splunk precedence:
-// system default → TA default → TA local → system local.
 func taDirsWithSystem(splunkHome, taDir string) []string {
 	etcDir := filepath.Join(splunkHome, "etc")
 	return []string{
@@ -203,15 +199,12 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ConfDirs returns the conf search path for a Splunk home directory, following
-// standard Splunk precedence across all apps.
+// ConfDirs returns the Splunk btool conf search path for splunkHome.
 func ConfDirs(splunkHome string) []string {
 	return splunkHomeDirs(splunkHome)
 }
 
-// ConfDirsWithSystem returns the conf search path for a single TA directory
-// combined with system-level config from splunkHome, following Splunk
-// precedence: system default → TA default → TA local → system local.
+// ConfDirsWithSystem returns the Splunk btool conf search path for a single TA merged with system config.
 func ConfDirsWithSystem(splunkHome, taDir string) []string {
 	return taDirsWithSystem(splunkHome, taDir)
 }

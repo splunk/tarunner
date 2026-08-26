@@ -29,10 +29,6 @@ func (s *Stanza) IsDisabled() bool {
 	return p != nil && p.Value == "1"
 }
 
-// ReadInput parses an inputs.conf payload. appDir is the app directory
-// (e.g. $SPLUNK_HOME/etc/apps/my_ta) stored on each stanza for use when
-// resolving relative script paths at execution time. Pass an empty string
-// when the app directory is unknown or irrelevant.
 func ReadInput(payload []byte, appDir string) ([]Input, error) {
 	f, err := ini.Load(payload)
 	if err != nil {
@@ -69,10 +65,7 @@ func ReadInput(payload []byte, appDir string) ([]Input, error) {
 	return result, nil
 }
 
-// MergeInputs merges multiple slices of inputs, with later slices taking
-// precedence over earlier ones (local/ wins over default/).
-// Stanzas are keyed by name; params are merged key by key so that a later
-// layer only overrides the keys it explicitly sets.
+// MergeInputs merges layered inputs; later layers take precedence per param key.
 func MergeInputs(layers [][]Input) []Input {
 	seen := make(map[string]int)
 	var result []Input
@@ -90,9 +83,6 @@ func MergeInputs(layers [][]Input) []Input {
 	return result
 }
 
-// mergeInput merges override into base at the param level.
-// Keys present in override replace the same key in base; keys only in base
-// are preserved.
 func mergeInput(base, override Input) Input {
 	merged := base
 	params := make(map[string]int, len(base.Configuration.Stanza.Params))
