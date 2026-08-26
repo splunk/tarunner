@@ -1,0 +1,9 @@
+change_type: bug_fix
+
+component: scriptedinput
+
+note: "fix interval parsing to accept fractional seconds (e.g. `60.0`)"
+
+issues: [120]
+
+subtext:
