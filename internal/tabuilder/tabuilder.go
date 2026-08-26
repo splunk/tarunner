@@ -309,13 +309,15 @@ func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings c
 }
 
 // CreateOutputExporter builds a logs exporter from one built-in output stanza.
+// Returns nil (no error) for unsupported output kinds.
 func CreateOutputExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	parsed, err := stanza.ParseOutputName(output.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
 	}
 	if parsed.Kind != "httpout" {
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
+		// unsupported kind
+		return nil, nil
 	}
 	return newHECExporter(output, logger, telemetrySettings)
 }

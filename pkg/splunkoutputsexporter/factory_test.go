@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/pdata/plog"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkoutputsexporter"
 )
@@ -71,13 +72,13 @@ func TestWithSubExporterRegistersCustomScheme(t *testing.T) {
 	require.Equal(t, "splunk:9997", fake.requests[0].Output.Configuration.Stanza.Params.Get("server").Value)
 }
 
-func TestWithSubExporterRejectsUnsupportedScheme(t *testing.T) {
+func TestWithSubExporterSkipsUnsupportedScheme(t *testing.T) {
 	baseDir := writeTA(t, "[tcpout:primary]\nserver = splunk:9997\n")
 
 	factory := splunkoutputsexporter.NewFactory()
 	exp, err := factory.CreateLogs(context.Background(), newExporterSettings(), splunkoutputsexporter.Config{BaseDir: baseDir})
-	require.ErrorContains(t, err, `unsupported scheme "tcpout"`)
-	require.Nil(t, exp)
+	require.NoError(t, err)
+	require.NotNil(t, exp)
 }
 
 type fakeSubExporterFactory struct {
@@ -114,7 +115,8 @@ func (fakeLogsExporter) ConsumeLogs(context.Context, plog.Logs) error {
 
 func newExporterSettings() exporter.Settings {
 	return exporter.Settings{
-		ID: component.MustNewID("splunk_outputs"),
+		ID:                component.MustNewID("splunk_outputs"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
 	}
 }
 

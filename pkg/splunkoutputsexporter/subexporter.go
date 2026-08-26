@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/stanza"
@@ -102,6 +103,10 @@ func (o factoryOptions) createExporters(ctx context.Context, baseDir string, out
 		e, err := o.createExporter(ctx, baseDir, output, settings)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create exporter %q: %w", output.Configuration.Stanza.Name, err)
+		}
+		if e == nil {
+			settings.Logger.Info("splunk_outputs: skipping unsupported output stanza", zap.String("stanza", output.Configuration.Stanza.Name))
+			continue
 		}
 		exporters = append(exporters, e)
 	}
