@@ -157,6 +157,9 @@ func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, tra
 		if err != nil {
 			return nil, fmt.Errorf("failed to create receiver %q: %w", name, err)
 		}
+		if l == nil {
+			continue
+		}
 		receivers = append(receivers, l)
 	}
 	return receivers, nil
@@ -166,6 +169,11 @@ func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
+	}
+	if parsed.Target == "" {
+		// stanza has no target (e.g. [script], [tcp]) — it is a default-settings
+		// stanza, not an actual input to run.
+		return nil, nil
 	}
 	scheme := parsed.Kind
 	if scheme == "" {
