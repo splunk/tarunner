@@ -60,7 +60,7 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 }
 
 // CreateReceiver builds a single logs receiver for an input stanza.
-// Returns nil (no error) for unsupported input kinds.
+// Returns nil receiver for unsupported input kinds; the caller is responsible for logging.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
@@ -116,7 +116,6 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 			Props:      props,
 		}, next)
 	default:
-		// unsupported kind — skip silently
 		return nil, nil
 	}
 }
@@ -302,14 +301,13 @@ func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings c
 }
 
 // CreateOutputExporter builds a logs exporter from one built-in output stanza.
-// Returns nil (no error) for unsupported output kinds.
+// Returns nil exporter for unsupported output kinds; the caller is responsible for logging.
 func CreateOutputExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	parsed, err := stanza.ParseOutputName(output.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
 	}
 	if parsed.Kind != "httpout" {
-		// unsupported kind
 		return nil, nil
 	}
 	return newHECExporter(output, logger, telemetrySettings)
