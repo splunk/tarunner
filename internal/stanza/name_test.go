@@ -36,6 +36,34 @@ func TestParseNameRejectsEmptyKind(t *testing.T) {
 	require.ErrorIs(t, err, errEmptyKind)
 }
 
+func TestParseOutputName(t *testing.T) {
+	tests := []struct {
+		name   string
+		parsed Name
+	}{
+		{name: "httpout", parsed: Name{Kind: "httpout"}},
+		{name: "tcpout:primary", parsed: Name{Kind: "tcpout", Target: "primary"}},
+		{name: "s2s://primary", parsed: Name{Kind: "s2s", Target: "primary"}},
+		{name: "tcpout-server://splunk:9997", parsed: Name{Kind: "tcpout-server", Target: "splunk:9997"}},
+		{name: "S2S:Primary", parsed: Name{Kind: "s2s", Target: "Primary"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parsed, err := ParseOutputName(test.name)
+			require.NoError(t, err)
+			require.Equal(t, test.parsed, parsed)
+		})
+	}
+}
+
+func TestParseOutputNameRejectsEmptyKind(t *testing.T) {
+	for _, name := range []string{"", "://target", ":target"} {
+		_, err := ParseOutputName(name)
+		require.ErrorIs(t, err, errEmptyKind)
+	}
+}
+
 func TestListenAddress(t *testing.T) {
 	require.Equal(t, ":9997", ListenAddress("9997"))
 	require.Equal(t, ":9997", ListenAddress(":9997"))

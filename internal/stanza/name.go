@@ -40,6 +40,30 @@ func ParseName(raw string) (Name, error) {
 	return Name{Target: raw}, nil
 }
 
+// ParseOutputName splits a Splunk output stanza name into a kind and target.
+//
+// Outputs commonly use both kind:target group names, such as tcpout:primary,
+// and URL-style names, such as tcpout-server://host:9997. Stanzas without a
+// target use the full stanza name as the kind.
+func ParseOutputName(raw string) (Name, error) {
+	if raw == "" {
+		return Name{}, errEmptyKind
+	}
+	if kind, target, ok := strings.Cut(raw, "://"); ok {
+		if kind == "" {
+			return Name{}, errEmptyKind
+		}
+		return Name{Kind: strings.ToLower(kind), Target: target}, nil
+	}
+	if kind, target, ok := strings.Cut(raw, ":"); ok {
+		if kind == "" {
+			return Name{}, errEmptyKind
+		}
+		return Name{Kind: strings.ToLower(kind), Target: target}, nil
+	}
+	return Name{Kind: strings.ToLower(raw)}, nil
+}
+
 // ListenAddress converts Splunk's port-only network stanza form to the
 // host:port form expected by the OpenTelemetry network receivers.
 func ListenAddress(target string) string {
