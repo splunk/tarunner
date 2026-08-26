@@ -142,8 +142,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexpo
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.157.0/go.mod h1:EEHR9WkKjnZA30xrn7tz6jiczE49RVJnQOgLqS4nJDE=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/ackextension v0.157.0 h1:biFNL7OCavTRGSRqHuu83uw6yDu4tUPHhze0FN48aOE=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/ackextension v0.157.0/go.mod h1:XcMDJnqBbYCENJloY7w8t5f09SIB1H/R2QOpIUa4U3o=
-github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.157.0 h1:4t8wbN7CzwAra4dW7EjtqO+Gt3qJoAEP87vu/KuKfZ8=
-github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.157.0/go.mod h1:fc+AF4Np1AMkDIxtZSPduXV/FTl6VeME3rp+ZsawcfY=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.157.0 h1:ZUHfd8qumKAMctr0CnRdsMjfke/RBU8702O3auyWMtM=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.157.0/go.mod h1:x6bJlY9KOnHTbRqKhdmR5jbutjunFsDC5r+OP60+RRU=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.157.0 h1:aQVvm4iiT1DUx2CzeDLEWETDKgbBvWAPJgancj6SQXY=
