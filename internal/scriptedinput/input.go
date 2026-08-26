@@ -5,8 +5,10 @@ package scriptedinput
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
@@ -86,19 +88,25 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 				case <-si.doneChan:
 					return
 				default:
-					si.execute(baseDir, input)
+					if si.execute(baseDir, input) {
+						return
+					}
 				}
 			}
 		}()
 	} else {
 		interval := time.Duration(intervalS) * time.Second
 		go func() {
-			si.execute(baseDir, input)
+			if si.execute(baseDir, input) {
+				return
+			}
 
 			for {
 				select {
 				case <-time.After(interval):
-					si.execute(baseDir, input)
+					if si.execute(baseDir, input) {
+						return
+					}
 				case <-si.doneChan:
 					return
 				}
@@ -108,10 +116,20 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 	return true, nil
 }
 
-func (si *ScriptedInput) execute(baseDir string, input conf.Input) {
+// isPermanentExecError reports whether err is a permanent execution error
+// that will never succeed on retry (e.g. script not found, permission denied).
+func isPermanentExecError(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission)
+}
+
+// execute runs the input and logs any error. Returns true if the error is
+// permanent and the caller should stop retrying.
+func (si *ScriptedInput) execute(baseDir string, input conf.Input) bool {
 	if err := si._execute(baseDir, input); err != nil {
 		si.logger.Error("Error executing input", zap.String("input", input.Configuration.Stanza.Name), zap.String("error", err.Error()))
+		return isPermanentExecError(err)
 	}
+	return false
 }
 
 func (si *ScriptedInput) _execute(baseDir string, input conf.Input) error {
