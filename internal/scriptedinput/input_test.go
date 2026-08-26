@@ -14,9 +14,48 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/splunk/tarunner/internal/conf"
 )
+
+func Test_ScriptedInput_PermanentError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows because scripts use bash")
+	}
+
+	core, logs := observer.New(zapcore.ErrorLevel)
+	settings := componenttest.NewNopTelemetrySettings()
+	settings.Logger = zap.New(core)
+
+	c := NewConfig()
+	c.BaseDir = "testdata"
+	c.Input = conf.Input{
+		Configuration: conf.Configuration{
+			Stanza: conf.Stanza{
+				Name:   "script://./bin/nonexistent.sh",
+				Params: []conf.Param{{Name: "interval", Value: "1"}},
+			},
+		},
+	}
+	o, err := c.Build(settings)
+	require.NoError(t, err)
+	fo := testutil.NewFakeOutput(t)
+	require.NoError(t, fo.Start(nil))
+	t.Cleanup(func() { require.NoError(t, fo.Stop()) })
+	o.SetOutputIDs([]string{fo.ID()})
+	require.NoError(t, o.SetOutputs([]operator.Operator{fo}))
+	require.NoError(t, o.Start(nil))
+
+	// wait long enough that a non-permanent error would have retried multiple times
+	time.Sleep(300 * time.Millisecond)
+	require.NoError(t, o.Stop())
+
+	// permanent error should have been logged exactly once, not retried
+	assert.Equal(t, 1, logs.Len(), "expected exactly one error log, got %d", logs.Len())
+	assert.Len(t, fo.Received, 0)
+}
 
 func Test_ScriptedInput(t *testing.T) {
 	if runtime.GOOS == "windows" {
