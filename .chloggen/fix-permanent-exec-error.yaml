@@ -1,0 +1,9 @@
+change_type: bug_fix
+
+component: scriptedinput
+
+note: "stop retrying scripted inputs that fail with a permanent error (e.g. script not found, permission denied)"
+
+issues: [121]
+
+subtext:
