@@ -5,10 +5,7 @@ package splunkinputsreceiver
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -93,7 +90,7 @@ func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Se
 		return nil, err
 	}
 
-	taDirs, err := discoverTAs(splunkHome)
+	taDirs, err := tabuilder.DiscoverTAs(splunkHome)
 	if err != nil {
 		return nil, err
 	}
@@ -120,29 +117,6 @@ func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Se
 		allReceivers = append(allReceivers, receivers...)
 	}
 	return packReceivers(allReceivers), nil
-}
-
-// discoverTAs returns all direct child directories under $SPLUNK_HOME/etc/apps
-// whose name starts with "splunk_ta_" (case-insensitive).
-func discoverTAs(splunkHome string) ([]string, error) {
-	appsDir := filepath.Join(splunkHome, "etc", "apps")
-	entries, err := os.ReadDir(appsDir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("splunk_inputs: failed to scan %s: %w", appsDir, err)
-	}
-	var taDirs []string
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(entry.Name()), "splunk_ta_") {
-			taDirs = append(taDirs, filepath.Join(appsDir, entry.Name()))
-		}
-	}
-	return taDirs, nil
 }
 
 func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, transforms []Transform, props []Prop, baseDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {

@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
@@ -136,18 +136,39 @@ func confFilePaths(dirs []string, filename string) []string {
 	return paths
 }
 
+// DiscoverTAs returns all direct child directories under splunkHome/etc/apps
+// whose name starts with "splunk_ta_" (case-insensitive).
+func DiscoverTAs(splunkHome string) ([]string, error) {
+	appsDir := filepath.Join(splunkHome, "etc", "apps")
+	entries, err := os.ReadDir(appsDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("tabuilder: failed to scan %s: %w", appsDir, err)
+	}
+	var taDirs []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(entry.Name()), "splunk_ta_") {
+			taDirs = append(taDirs, filepath.Join(appsDir, entry.Name()))
+		}
+	}
+	return taDirs, nil
+}
+
 func splunkHomeDirs(splunkHome string) []string {
+	taDirs, _ := DiscoverTAs(splunkHome)
 	etcDir := filepath.Join(splunkHome, "etc")
 
-	appDirs, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*"))
-	sort.Strings(appDirs)
-
 	dirs := []string{filepath.Join(etcDir, "system", "default")}
-	for _, app := range appDirs {
-		dirs = append(dirs, filepath.Join(app, "default"))
+	for _, ta := range taDirs {
+		dirs = append(dirs, filepath.Join(ta, "default"))
 	}
-	for _, app := range appDirs {
-		dirs = append(dirs, filepath.Join(app, "local"))
+	for _, ta := range taDirs {
+		dirs = append(dirs, filepath.Join(ta, "local"))
 	}
 	dirs = append(dirs, filepath.Join(etcDir, "system", "local"))
 
