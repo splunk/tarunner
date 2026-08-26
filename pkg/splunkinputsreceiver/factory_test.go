@@ -28,7 +28,7 @@ func TestWithSubReceiverRegistersCustomScheme(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
-	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "ta"), fake.request.BaseDir)
+	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
 	require.Equal(t, "/thing", fake.request.Path)
 	require.Equal(t, "custom:///thing", fake.request.Input.Configuration.Stanza.Name)
 }
@@ -42,7 +42,7 @@ func TestWithSubReceiverOverridesBuiltInAndHandlesEmptySchemeAsScript(t *testing
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
-	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "ta"), fake.request.BaseDir)
+	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
 	require.Equal(t, "modinput", fake.request.Input.Configuration.Stanza.Name)
 }
 
@@ -55,7 +55,7 @@ func TestWithSubReceiverMatchesNormalizedScheme(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
-	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "ta"), fake.request.BaseDir)
+	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
 	require.Equal(t, "thing", fake.request.Path)
 	require.Equal(t, "Custom://thing", fake.request.Input.Configuration.Stanza.Name)
 }
@@ -82,7 +82,7 @@ func TestWithSubReceiverSkipsDisabledCustomStanza(t *testing.T) {
 
 func TestWithSubReceiverRequestIncludesPropsAndTransforms(t *testing.T) {
 	splunkHome := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
-	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "ta", "default")
+	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test", "default")
 	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "props.conf"), []byte("[custom]\nTRANSFORMS-routing = route\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "transforms.conf"), []byte("[route]\nREGEX = ^(.*)$\nFORMAT = $1\n"), 0o600))
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
@@ -149,7 +149,7 @@ func newReceiverSettings() receiver.Settings {
 func writeTA(t *testing.T, inputsConf string) string {
 	t.Helper()
 	splunkHome := t.TempDir()
-	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "ta", "default")
+	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test", "default")
 	require.NoError(t, os.MkdirAll(taDefaultDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "inputs.conf"), []byte(inputsConf), 0o600))
 	return splunkHome

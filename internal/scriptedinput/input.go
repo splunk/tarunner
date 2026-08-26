@@ -68,11 +68,11 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 	if input.Configuration.Stanza.IsDisabled() {
 		return false, nil
 	}
-	intervalS := 3600
+	intervalS := 3600.0
 	for _, p := range input.Configuration.Stanza.Params {
 		if p.Name == "interval" {
 			var err error
-			intervalS, err = strconv.Atoi(p.Value)
+			intervalS, err = strconv.ParseFloat(p.Value, 64)
 			if err != nil {
 				return false, err
 			}
@@ -95,7 +95,7 @@ func (si *ScriptedInput) scheduleScriptedInput(baseDir string, input conf.Input)
 			}
 		}()
 	} else {
-		interval := time.Duration(intervalS) * time.Second
+		interval := time.Duration(intervalS * float64(time.Second))
 		go func() {
 			if !si.execute(baseDir, input) {
 				return
