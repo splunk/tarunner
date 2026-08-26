@@ -21,6 +21,7 @@ func (p Params) Get(name string) *Param {
 type Stanza struct {
 	Name   string `xml:"name,attr"`
 	App    string `xml:"app,attr"`
+	AppDir string `xml:"-"` // app directory used to resolve relative script paths at execution time
 	Params Params `xml:"param"`
 }
 
