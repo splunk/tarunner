@@ -1,0 +1,14 @@
+change_type: enhancement
+
+component: splunk_inputs
+
+note: "add Splunk btool config precedence across system and `splunk_ta_*` app directories"
+
+issues: [117]
+
+subtext: |
+  The `base_dir` config field (or `$SPLUNK_HOME` env var) now points to the Splunk
+  installation root. The receiver discovers all `splunk_ta_*` directories automatically
+  and merges `inputs.conf`, `transforms.conf`, and `props.conf` per TA using standard
+  btool precedence — later layers win per key. Unsupported input and output stanza
+  kinds are now skipped silently with an info log instead of returning an error.
