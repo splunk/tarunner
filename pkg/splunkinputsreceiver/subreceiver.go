@@ -85,9 +85,9 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
 
-	splunkHome, err := resolveSplunkHome(cfg)
+	splunkHome, err := tabuilder.ResolveSplunkHome(cfg.BaseDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("splunk_inputs: %w", err)
 	}
 
 	taDirs, err := tabuilder.DiscoverTAs(splunkHome)

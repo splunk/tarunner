@@ -38,6 +38,17 @@ import (
 	"github.com/splunk/tarunner/internal/stanza"
 )
 
+// ResolveSplunkHome returns baseDir if set, otherwise falls back to $SPLUNK_HOME.
+func ResolveSplunkHome(baseDir string) (string, error) {
+	if baseDir != "" {
+		return baseDir, nil
+	}
+	if home := os.Getenv("SPLUNK_HOME"); home != "" {
+		return home, nil
+	}
+	return "", fmt.Errorf("base_dir is not set and $SPLUNK_HOME is not defined")
+}
+
 // CreateReceivers builds a logs receiver for every enabled input stanza,
 // dispatching by the stanza name's input kind. Stanzas with disabled=1 or
 // unsupported kinds are skipped silently.

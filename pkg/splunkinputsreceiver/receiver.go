@@ -6,8 +6,6 @@ package splunkinputsreceiver
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
@@ -51,16 +49,4 @@ func packReceivers(receivers []receiver.Logs) receiver.Logs {
 			receivers: receivers,
 		}
 	}
-}
-
-// resolveSplunkHome returns the Splunk installation root from the config,
-// falling back to the $SPLUNK_HOME environment variable.
-func resolveSplunkHome(cfg Config) (string, error) {
-	if cfg.BaseDir != "" {
-		return cfg.BaseDir, nil
-	}
-	if home := os.Getenv("SPLUNK_HOME"); home != "" {
-		return home, nil
-	}
-	return "", fmt.Errorf("splunk_inputs: base_dir is not set and $SPLUNK_HOME is not defined")
 }

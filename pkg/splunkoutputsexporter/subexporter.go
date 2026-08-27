@@ -6,7 +6,6 @@ package splunkoutputsexporter
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -77,12 +76,9 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings exporter.Settings, config component.Config) (exporter.Logs, error) {
 	cfg := config.(Config)
 
-	splunkHome := cfg.BaseDir
-	if splunkHome == "" {
-		splunkHome = os.Getenv("SPLUNK_HOME")
-	}
-	if splunkHome == "" {
-		return nil, fmt.Errorf("splunk_outputs: base_dir is not set and SPLUNK_HOME is not defined")
+	splunkHome, err := tabuilder.ResolveSplunkHome(cfg.BaseDir)
+	if err != nil {
+		return nil, fmt.Errorf("splunk_outputs: %w", err)
 	}
 
 	outputs, err := tabuilder.ReadOutputGroups(splunkHome)
