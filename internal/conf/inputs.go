@@ -21,6 +21,7 @@ type Input struct {
 	SessionKey    string        `xml:"session_key"`
 	CheckpointDir string        `xml:"checkpoint_dir"`
 	Configuration Configuration `xml:"configuration"`
+	AppDir        string        `xml:"-"` // app directory used to resolve relative script paths at execution time
 }
 
 // IsDisabled reports whether the stanza has disabled=1.
@@ -41,11 +42,11 @@ func ReadInput(payload []byte, appDir string) ([]Input, error) {
 			continue // disregard default section. We need a stanza per input.
 		}
 		i := Input{
+			AppDir: appDir,
 			Configuration: Configuration{
 				Stanza: Stanza{
 					Name:   section.Name(),
 					App:    appName,
-					AppDir: appDir,
 					Params: make([]Param, len(section.Keys())),
 				},
 			},

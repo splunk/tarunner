@@ -18,12 +18,9 @@ func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Use AppDir from the stanza when available; it points to the specific app
-	// directory the conf was parsed from, which is more accurate than baseDir
-	// when multiple apps are layered together.
 	resolveDir := baseDir
-	if input.Configuration.Stanza.AppDir != "" {
-		resolveDir = input.Configuration.Stanza.AppDir
+	if input.AppDir != "" {
+		resolveDir = input.AppDir
 	}
 	switch parsed.Kind {
 	case "monitor", "batch":
