@@ -20,8 +20,8 @@ type Input struct {
 	ServerURI     string        `xml:"server_uri"`
 	SessionKey    string        `xml:"session_key"`
 	CheckpointDir string        `xml:"checkpoint_dir"`
+	AppDir        string        `xml:"-"`
 	Configuration Configuration `xml:"configuration"`
-	AppDir        string        `xml:"-"` // app directory used to resolve relative script paths at execution time
 }
 
 // IsDisabled reports whether the stanza has disabled=1.

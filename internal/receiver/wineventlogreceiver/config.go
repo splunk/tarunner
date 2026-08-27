@@ -8,9 +8,8 @@ import (
 )
 
 type Config struct {
+	Input      conf.Input       `mapstructure:"-"`
+	BaseDir    string           `mapstructure:"-"`
 	Transforms []conf.Transform `mapstructure:"-"`
 	Props      []conf.Prop      `mapstructure:"-"`
-
-	BaseDir string     `mapstructure:"-"`
-	Input   conf.Input `mapstructure:"-"`
 }
