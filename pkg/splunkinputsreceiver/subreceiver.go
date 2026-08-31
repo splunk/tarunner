@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/stanza"
@@ -83,37 +84,56 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 
 func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
-	baseDir := cfg.BaseDir
-	inputs, err := tabuilder.ReadInputs(baseDir)
+
+	splunkHome, err := tabuilder.ResolveSplunkHome(cfg.BaseDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("splunk_inputs: %w", err)
 	}
-	transforms, err := tabuilder.ReadTransforms(baseDir)
-	if err != nil {
-		return nil, err
-	}
-	props, err := tabuilder.ReadProps(baseDir)
+
+	taDirs, err := tabuilder.DiscoverTAs(splunkHome)
 	if err != nil {
 		return nil, err
 	}
 
-	receivers, err := o.createReceivers(ctx, inputs, transforms, props, baseDir, logs, settings)
-	if err != nil {
-		return nil, err
+	var allReceivers []receiver.Logs
+	for _, taDir := range taDirs {
+		dirs := tabuilder.ConfDirsWithSystem(splunkHome, taDir)
+		inputs, err := tabuilder.ReadInputs(dirs)
+		if err != nil {
+			return nil, err
+		}
+		transforms, err := tabuilder.ReadTransforms(dirs)
+		if err != nil {
+			return nil, err
+		}
+		props, err := tabuilder.ReadProps(dirs)
+		if err != nil {
+			return nil, err
+		}
+		receivers, err := o.createReceivers(ctx, inputs, transforms, props, taDir, logs, settings)
+		if err != nil {
+			return nil, err
+		}
+		allReceivers = append(allReceivers, receivers...)
 	}
-	return packReceivers(receivers), nil
+	return packReceivers(allReceivers), nil
 }
 
 func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, transforms []Transform, props []Prop, baseDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
-		disabled := input.Configuration.Stanza.Params.Get("disabled")
-		if disabled != nil && disabled.Value == "1" {
+		name := input.Configuration.Stanza.Name
+		if input.Configuration.Stanza.IsDisabled() {
+			settings.Logger.Info("splunk_inputs: skipping disabled stanza", zap.String("stanza", name))
 			continue
 		}
 		l, err := o.createReceiver(ctx, baseDir, next, input, transforms, props, settings)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
+			return nil, fmt.Errorf("failed to create receiver %q: %w", name, err)
+		}
+		if l == nil {
+			settings.Logger.Info("splunk_inputs: skipping unsupported input stanza", zap.String("stanza", name))
+			continue
 		}
 		receivers = append(receivers, l)
 	}
@@ -138,5 +158,9 @@ func (o factoryOptions) createReceiver(ctx context.Context, baseDir string, next
 			Props:      props,
 		}, next)
 	}
-	return tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
+	l, err := tabuilder.CreateReceiver(ctx, baseDir, next, input, transforms, props, settings.TelemetrySettings)
+	if l == nil && err == nil {
+		return nil, fmt.Errorf("unsupported scheme %q", scheme)
+	}
+	return l, err
 }

@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
@@ -38,19 +38,32 @@ import (
 	"github.com/splunk/tarunner/internal/stanza"
 )
 
+// ResolveSplunkHome returns baseDir if set, otherwise falls back to $SPLUNK_HOME.
+func ResolveSplunkHome(baseDir string) (string, error) {
+	if baseDir != "" {
+		return baseDir, nil
+	}
+	if home := os.Getenv("SPLUNK_HOME"); home != "" {
+		return home, nil
+	}
+	return "", fmt.Errorf("base_dir is not set and $SPLUNK_HOME is not defined")
+}
+
 // CreateReceivers builds a logs receiver for every enabled input stanza,
-// dispatching by the stanza name's input kind. Stanzas with disabled=1 are
-// skipped.
+// dispatching by the stanza name's input kind. Stanzas with disabled=1 or
+// unsupported kinds are skipped silently.
 func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf.Transform, props []conf.Prop, baseDir string, next consumer.Logs, telemetrySettings component.TelemetrySettings) ([]receiver.Logs, error) {
 	var receivers []receiver.Logs
 	for _, input := range inputs {
-		disabled := input.Configuration.Stanza.Params.Get("disabled")
-		if disabled != nil && disabled.Value == "1" {
+		if input.Configuration.Stanza.IsDisabled() {
 			continue
 		}
 		l, err := CreateReceiver(ctx, baseDir, next, input, transforms, props, telemetrySettings)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create receiver %q: %w", input.Configuration.Stanza.Name, err)
+		}
+		if l == nil {
+			continue
 		}
 		receivers = append(receivers, l)
 	}
@@ -58,6 +71,7 @@ func CreateReceivers(ctx context.Context, inputs []conf.Input, transforms []conf
 }
 
 // CreateReceiver builds a single logs receiver for an input stanza.
+// Returns nil receiver for unsupported input kinds; the caller is responsible for logging.
 func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, input conf.Input, transforms []conf.Transform, props []conf.Prop, telemetrySettings component.TelemetrySettings) (receiver.Logs, error) {
 	parsed, err := stanza.ParseName(input.Configuration.Stanza.Name)
 	if err != nil {
@@ -113,7 +127,7 @@ func CreateReceiver(ctx context.Context, baseDir string, next consumer.Logs, inp
 			Props:      props,
 		}, next)
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
+		return nil, nil
 	}
 }
 
@@ -132,22 +146,52 @@ func confFilePaths(dirs []string, filename string) []string {
 	return paths
 }
 
+// DiscoverTAs returns splunk_ta_* directories under splunkHome/etc/apps.
+func DiscoverTAs(splunkHome string) ([]string, error) {
+	appsDir := filepath.Join(splunkHome, "etc", "apps")
+	entries, err := os.ReadDir(appsDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("tabuilder: failed to scan %s: %w", appsDir, err)
+	}
+	var taDirs []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(entry.Name()), "splunk_ta_") {
+			taDirs = append(taDirs, filepath.Join(appsDir, entry.Name()))
+		}
+	}
+	return taDirs, nil
+}
+
 func splunkHomeDirs(splunkHome string) []string {
+	taDirs, _ := DiscoverTAs(splunkHome)
 	etcDir := filepath.Join(splunkHome, "etc")
 
-	appDirs, _ := filepath.Glob(filepath.Join(etcDir, "apps", "*"))
-	sort.Strings(appDirs)
-
 	dirs := []string{filepath.Join(etcDir, "system", "default")}
-	for _, app := range appDirs {
-		dirs = append(dirs, filepath.Join(app, "default"))
+	for _, ta := range taDirs {
+		dirs = append(dirs, filepath.Join(ta, "default"))
 	}
-	for _, app := range appDirs {
-		dirs = append(dirs, filepath.Join(app, "local"))
+	for _, ta := range taDirs {
+		dirs = append(dirs, filepath.Join(ta, "local"))
 	}
 	dirs = append(dirs, filepath.Join(etcDir, "system", "local"))
 
 	return dirs
+}
+
+func taDirsWithSystem(splunkHome, taDir string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	return []string{
+		filepath.Join(etcDir, "system", "default"),
+		filepath.Join(taDir, "default"),
+		filepath.Join(taDir, "local"),
+		filepath.Join(etcDir, "system", "local"),
+	}
 }
 
 func readConfFiles(paths []string) ([][]byte, error) {
@@ -165,60 +209,79 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
-// ReadInputs reads inputs.conf, preferring local/ over default/.
-func ReadInputs(baseDir string) ([]conf.Input, error) {
-	fileToRead := filepath.Join(baseDir, "local", "inputs.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "inputs.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
+// ConfDirs returns the Splunk btool conf search path for splunkHome.
+func ConfDirs(splunkHome string) []string {
+	return splunkHomeDirs(splunkHome)
+}
+
+// ConfDirsWithSystem returns the Splunk btool conf search path for a single TA merged with system config.
+func ConfDirsWithSystem(splunkHome, taDir string) []string {
+	return taDirsWithSystem(splunkHome, taDir)
+}
+
+// ReadInputs discovers and merges inputs.conf files from the given search
+// directories. Use ConfDirs or ConfDirsWithSystem to build the dirs slice.
+// Returns nil (no error) when no inputs.conf files are found.
+func ReadInputs(dirs []string) ([]conf.Input, error) {
+	var layers [][]conf.Input
+	for _, path := range confFilePaths(dirs, "inputs.conf") {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
 			return nil, err
 		}
+		appDir := filepath.Dir(filepath.Dir(path)) // strip /default or /local
+		inputs, err := conf.ReadInput(b, appDir)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
+		layers = append(layers, inputs)
 	}
-	b, err := os.ReadFile(fileToRead)
-	if err != nil {
-		return nil, err
-	}
-	return conf.ReadInput(b)
+	return conf.MergeInputs(layers), nil
 }
 
-// ReadTransforms reads transforms.conf, preferring local/ over default/. It
-// returns a nil slice (and no error) when the file is absent.
-func ReadTransforms(baseDir string) ([]conf.Transform, error) {
-	fileToRead := filepath.Join(baseDir, "local", "transforms.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "transforms.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-	}
-	b, err := os.ReadFile(fileToRead)
+// ReadTransforms discovers and merges transforms.conf files from the given
+// search directories. Returns nil (no error) when absent.
+func ReadTransforms(dirs []string) ([]conf.Transform, error) {
+	payloads, err := readConfFiles(confFilePaths(dirs, "transforms.conf"))
 	if err != nil {
 		return nil, err
 	}
-	return conf.ReadTransforms(b)
+	var layers [][]conf.Transform
+	for _, b := range payloads {
+		transforms, err := conf.ReadTransforms(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, transforms)
+	}
+	return conf.MergeTransforms(layers), nil
 }
 
-// ReadProps reads props.conf, preferring local/ over default/. It returns a nil
-// slice (and no error) when the file is absent.
-func ReadProps(baseDir string) ([]conf.Prop, error) {
-	fileToRead := filepath.Join(baseDir, "local", "props.conf")
-	if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-		fileToRead = filepath.Join(baseDir, "default", "props.conf")
-		if _, err := os.Stat(fileToRead); errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-	}
-	b, err := os.ReadFile(fileToRead)
+// ReadProps discovers and merges props.conf files from the given search
+// directories. Returns nil (no error) when absent.
+func ReadProps(dirs []string) ([]conf.Prop, error) {
+	payloads, err := readConfFiles(confFilePaths(dirs, "props.conf"))
 	if err != nil {
 		return nil, err
 	}
-	return conf.ReadProps(b)
+	var layers [][]conf.Prop
+	for _, b := range payloads {
+		props, err := conf.ReadProps(b)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, props)
+	}
+	return conf.MergeProps(layers), nil
 }
 
 // ReadOutputs merges outputs.conf across $SPLUNK_HOME using standard Splunk
 // precedence. Use HTTPOut (or future TCPOut, etc.) to extract a specific type.
 func ReadOutputs(splunkHome string) (conf.ConfMap, error) {
-	payloads, err := readConfFiles(confFilePaths(splunkHomeDirs(splunkHome), "outputs.conf"))
+	payloads, err := readConfFiles(confFilePaths(ConfDirs(splunkHome), "outputs.conf"))
 	if err != nil {
 		return nil, err
 	}
@@ -249,13 +312,14 @@ func CreateExporter(merged conf.ConfMap, logger *zap.Logger, telemetrySettings c
 }
 
 // CreateOutputExporter builds a logs exporter from one built-in output stanza.
+// Returns nil exporter for unsupported output kinds; the caller is responsible for logging.
 func CreateOutputExporter(output *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	parsed, err := stanza.ParseOutputName(output.Configuration.Stanza.Name)
 	if err != nil {
 		return nil, err
 	}
 	if parsed.Kind != "httpout" {
-		return nil, fmt.Errorf("unsupported scheme %q", parsed.Kind)
+		return nil, nil
 	}
 	return newHECExporter(output, logger, telemetrySettings)
 }

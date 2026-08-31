@@ -11,6 +11,24 @@ type Transform struct {
 	Format string
 }
 
+// MergeTransforms merges multiple slices of transforms, with later slices
+// taking precedence. Stanzas are keyed by name; the last definition wins.
+func MergeTransforms(layers [][]Transform) []Transform {
+	seen := make(map[string]int)
+	var result []Transform
+	for _, layer := range layers {
+		for _, t := range layer {
+			if idx, ok := seen[t.Name]; ok {
+				result[idx] = t
+			} else {
+				seen[t.Name] = len(result)
+				result = append(result, t)
+			}
+		}
+	}
+	return result
+}
+
 func ReadTransforms(payload []byte) ([]Transform, error) {
 	f, err := ini.Load(payload)
 	if err != nil {

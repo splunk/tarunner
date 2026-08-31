@@ -15,7 +15,7 @@ import (
 func TestOneInput(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("testdata", "oneinput.conf"))
 	require.NoError(t, err)
-	res, err := ReadInput(b)
+	res, err := ReadInput(b, "")
 	require.NoError(t, err)
 	assert.Equal(
 		t,
@@ -50,7 +50,7 @@ func TestOneInput(t *testing.T) {
 func TestTwoInputs(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("testdata", "twoinputs.conf"))
 	require.NoError(t, err)
-	res, err := ReadInput(b)
+	res, err := ReadInput(b, "")
 	require.NoError(t, err)
 	assert.Equal(t, []Input{{
 		ServerHost:    "",
@@ -112,6 +112,38 @@ func TestTwoInputs(t *testing.T) {
 	}}, res)
 }
 
+func TestMergeInputsPartialOverride(t *testing.T) {
+	base := []Input{{Configuration: Configuration{Stanza: Stanza{
+		Name:   "monitor:///var/log/syslog",
+		Params: Params{{Name: "sourcetype", Value: "syslog"}, {Name: "index", Value: "main"}},
+	}}}}
+	override := []Input{{Configuration: Configuration{Stanza: Stanza{
+		Name:   "monitor:///var/log/syslog",
+		Params: Params{{Name: "index", Value: "override"}},
+	}}}}
+
+	merged := MergeInputs([][]Input{base, override})
+	require.Len(t, merged, 1)
+	assert.Equal(t, "syslog", merged[0].Configuration.Stanza.Params.Get("sourcetype").Value)
+	assert.Equal(t, "override", merged[0].Configuration.Stanza.Params.Get("index").Value)
+}
+
+func TestMergeInputsFullOverride(t *testing.T) {
+	base := []Input{{Configuration: Configuration{Stanza: Stanza{
+		Name:   "monitor:///var/log/syslog",
+		Params: Params{{Name: "sourcetype", Value: "syslog"}, {Name: "index", Value: "main"}},
+	}}}}
+	override := []Input{{Configuration: Configuration{Stanza: Stanza{
+		Name:   "monitor:///var/log/syslog",
+		Params: Params{{Name: "sourcetype", Value: "sourcetype_override"}, {Name: "index", Value: "index_override"}},
+	}}}}
+
+	merged := MergeInputs([][]Input{base, override})
+	require.Len(t, merged, 1)
+	assert.Equal(t, "sourcetype_override", merged[0].Configuration.Stanza.Params.Get("sourcetype").Value)
+	assert.Equal(t, "index_override", merged[0].Configuration.Stanza.Params.Get("index").Value)
+}
+
 func TestToXML(t *testing.T) {
 	testStr := `<?xml version="1.0" encoding="UTF-8"?>
 <Input>
@@ -133,7 +165,7 @@ func TestToXML(t *testing.T) {
 </Input>`
 	b, err := os.ReadFile(filepath.Join("testdata", "oneinput.conf"))
 	require.NoError(t, err)
-	res, err := ReadInput(b)
+	res, err := ReadInput(b, "")
 	require.NoError(t, err)
 	assert.Len(t, res, 1)
 	res[0].ServerHost = "773c28971b2a"

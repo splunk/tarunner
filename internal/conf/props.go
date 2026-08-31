@@ -60,6 +60,26 @@ func (p *Prop) Type() PropType {
 	}
 }
 
+// MergeProps merges multiple slices of props, with later slices taking
+// precedence. Stanzas are keyed by name; the last definition wins.
+// The merged result is re-ordered by specificity.
+func MergeProps(layers [][]Prop) []Prop {
+	seen := make(map[string]int)
+	var result []Prop
+	for _, layer := range layers {
+		for _, p := range layer {
+			if idx, ok := seen[p.Name]; ok {
+				result[idx] = p
+			} else {
+				seen[p.Name] = len(result)
+				result = append(result, p)
+			}
+		}
+	}
+	orderProps(result)
+	return result
+}
+
 func ReadProps(payload []byte) ([]Prop, error) {
 	f, err := ini.Load(payload)
 	if err != nil {

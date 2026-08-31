@@ -14,79 +14,81 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/receiver"
+	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkinputsreceiver"
 )
 
 func TestWithSubReceiverRegistersCustomScheme(t *testing.T) {
-	baseDir := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
+	splunkHome := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
-	require.Equal(t, baseDir, fake.request.BaseDir)
+	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
 	require.Equal(t, "/thing", fake.request.Path)
 	require.Equal(t, "custom:///thing", fake.request.Input.Configuration.Stanza.Name)
 }
 
 func TestWithSubReceiverOverridesBuiltInAndHandlesEmptySchemeAsScript(t *testing.T) {
-	baseDir := writeTA(t, "[modinput]\ninterval = -1\n")
+	splunkHome := writeTA(t, "[modinput]\ninterval = -1\n")
 	fake := &fakeSubReceiverFactory{scheme: "script"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
-	require.Equal(t, "modinput", fake.request.Path)
+	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
 	require.Equal(t, "modinput", fake.request.Input.Configuration.Stanza.Name)
 }
 
 func TestWithSubReceiverMatchesNormalizedScheme(t *testing.T) {
-	baseDir := writeTA(t, "[Custom://thing]\n")
+	splunkHome := writeTA(t, "[Custom://thing]\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
+	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
 	require.Equal(t, "thing", fake.request.Path)
 	require.Equal(t, "Custom://thing", fake.request.Input.Configuration.Stanza.Name)
 }
 
 func TestWithSubReceiverRejectsUnsupportedScheme(t *testing.T) {
-	baseDir := writeTA(t, "[unsupported://thing]\n")
+	splunkHome := writeTA(t, "[unsupported://thing]\n")
 
 	factory := splunkinputsreceiver.NewFactory()
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.ErrorContains(t, err, `unsupported scheme "unsupported"`)
 	require.Nil(t, rcvr)
 }
 
 func TestWithSubReceiverSkipsDisabledCustomStanza(t *testing.T) {
-	baseDir := writeTA(t, "[custom:///thing]\ndisabled = 1\n")
+	splunkHome := writeTA(t, "[custom:///thing]\ndisabled = 1\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.False(t, fake.called)
 }
 
 func TestWithSubReceiverRequestIncludesPropsAndTransforms(t *testing.T) {
-	baseDir := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
-	defaultDir := filepath.Join(baseDir, "default")
-	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "props.conf"), []byte("[custom]\nTRANSFORMS-routing = route\n"), 0o600))
-	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "transforms.conf"), []byte("[route]\nREGEX = ^(.*)$\nFORMAT = $1\n"), 0o600))
+	splunkHome := writeTA(t, "[custom:///thing]\nsourcetype = custom\n")
+	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test", "default")
+	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "props.conf"), []byte("[custom]\nTRANSFORMS-routing = route\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "transforms.conf"), []byte("[route]\nREGEX = ^(.*)$\nFORMAT = $1\n"), 0o600))
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: baseDir}, nopConsumer{})
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
@@ -137,15 +139,18 @@ func (nopConsumer) ConsumeLogs(context.Context, plog.Logs) error {
 
 func newReceiverSettings() receiver.Settings {
 	return receiver.Settings{
-		ID: component.MustNewID("splunk_inputs"),
+		ID:                component.MustNewID("splunk_inputs"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
 	}
 }
 
+// writeTA creates a minimal Splunk home layout with one TA and returns the
+// splunk home path. The TA is placed at <splunkHome>/etc/apps/ta/.
 func writeTA(t *testing.T, inputsConf string) string {
 	t.Helper()
-	baseDir := t.TempDir()
-	defaultDir := filepath.Join(baseDir, "default")
-	require.NoError(t, os.Mkdir(defaultDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(defaultDir, "inputs.conf"), []byte(inputsConf), 0o600))
-	return baseDir
+	splunkHome := t.TempDir()
+	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test", "default")
+	require.NoError(t, os.MkdirAll(taDefaultDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "inputs.conf"), []byte(inputsConf), 0o600))
+	return splunkHome
 }

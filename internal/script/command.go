@@ -18,13 +18,23 @@ func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	resolveDir := baseDir
+	if input.AppDir != "" {
+		resolveDir = input.AppDir
+	}
 	switch parsed.Kind {
 	case "monitor", "batch":
 		return parsed.Target, nil
 	case "script":
-		return GetPath(baseDir, parsed.Target)
+		if filepath.IsAbs(parsed.Target) {
+			return parsed.Target, nil
+		}
+		return GetPath(resolveDir, parsed.Target)
 	case "":
-		return GetPath(baseDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), parsed.Target))
+		if filepath.IsAbs(parsed.Target) {
+			return parsed.Target, nil
+		}
+		return GetPath(resolveDir, filepath.Join("bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH), parsed.Target))
 	default:
 		return "", fmt.Errorf("unknown scheme %q", parsed.Kind)
 	}

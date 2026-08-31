@@ -92,33 +92,33 @@ func TestReadTransforms(t *testing.T) {
 	rootDir := filepath.Join("testdata", "transforms")
 	tests := []struct {
 		name          string
-		path          string
+		splunkHome    string
 		expectedName  string
 		expectedRegex string
 	}{
 		{
 			name:          "default",
-			path:          filepath.Join(rootDir, "default"),
+			splunkHome:    filepath.Join(rootDir, "splunk_default"),
 			expectedName:  "example_default",
 			expectedRegex: "default",
 		},
 		{
 			name:          "local",
-			path:          filepath.Join(rootDir, "local"),
+			splunkHome:    filepath.Join(rootDir, "splunk_local"),
 			expectedName:  "example_local",
 			expectedRegex: "local",
 		},
 		{
 			name:          "both",
-			path:          filepath.Join(rootDir, "both"),
-			expectedName:  "example_local2",
+			splunkHome:    filepath.Join(rootDir, "splunk_both"),
+			expectedName:  "example_transform",
 			expectedRegex: "local",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			transforms, err := ReadTransforms(test.path)
+			transforms, err := ReadTransforms(ConfDirs(test.splunkHome))
 			require.NoError(t, err)
 			require.Len(t, transforms, 1)
 			require.Equal(t, test.expectedName, transforms[0].Name)
