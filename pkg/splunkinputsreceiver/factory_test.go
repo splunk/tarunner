@@ -25,8 +25,6 @@ func TestWithSubReceiverRegistersCustomScheme(t *testing.T) {
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
 	rcvr := createAndStart(t, factory, splunkHome)
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
-	require.NoError(t, err)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
 	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)

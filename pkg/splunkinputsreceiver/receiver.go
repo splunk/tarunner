@@ -65,8 +65,8 @@ func (r *splunkInputsReceiver) Start(ctx context.Context, _ component.Host) erro
 func (r *splunkInputsReceiver) Shutdown(ctx context.Context) error {
 	if r.watcher != nil {
 		_ = r.watcher.Close()
+		<-r.doneCh
 	}
-	<-r.doneCh
 	r.handler.shutdown(ctx)
 	return nil
 }
