@@ -24,6 +24,7 @@ func TestWithSubReceiverRegistersCustomScheme(t *testing.T) {
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
+	rcvr := createAndStart(t, factory, splunkHome)
 	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
 	require.NoError(t, err)
 	require.NotNil(t, rcvr)
@@ -38,8 +39,7 @@ func TestWithSubReceiverOverridesBuiltInAndHandlesEmptySchemeAsScript(t *testing
 	fake := &fakeSubReceiverFactory{scheme: "script"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
-	require.NoError(t, err)
+	rcvr := createAndStart(t, factory, splunkHome)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
 	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
@@ -51,8 +51,7 @@ func TestWithSubReceiverMatchesNormalizedScheme(t *testing.T) {
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
-	require.NoError(t, err)
+	rcvr := createAndStart(t, factory, splunkHome)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
 	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
@@ -65,8 +64,10 @@ func TestWithSubReceiverRejectsUnsupportedScheme(t *testing.T) {
 
 	factory := splunkinputsreceiver.NewFactory()
 	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
+	require.NoError(t, err)
+	require.NotNil(t, rcvr)
+	err = rcvr.Start(context.Background(), nil)
 	require.ErrorContains(t, err, `unsupported scheme "unsupported"`)
-	require.Nil(t, rcvr)
 }
 
 func TestWithSubReceiverSkipsDisabledCustomStanza(t *testing.T) {
@@ -74,8 +75,7 @@ func TestWithSubReceiverSkipsDisabledCustomStanza(t *testing.T) {
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
-	require.NoError(t, err)
+	rcvr := createAndStart(t, factory, splunkHome)
 	require.NotNil(t, rcvr)
 	require.False(t, fake.called)
 }
@@ -88,8 +88,7 @@ func TestWithSubReceiverRequestIncludesPropsAndTransforms(t *testing.T) {
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
-	require.NoError(t, err)
+	rcvr := createAndStart(t, factory, splunkHome)
 	require.NotNil(t, rcvr)
 	require.True(t, fake.called)
 	require.Len(t, fake.request.Props, 1)
@@ -99,6 +98,16 @@ func TestWithSubReceiverRequestIncludesPropsAndTransforms(t *testing.T) {
 	require.Len(t, fake.request.Transforms, 1)
 	require.Equal(t, "route", fake.request.Transforms[0].Name)
 	require.Equal(t, "^(.*)$", fake.request.Transforms[0].Regex)
+}
+
+// createAndStart creates a receiver via the factory and calls Start, failing the test on any error.
+func createAndStart(t *testing.T, factory receiver.Factory, splunkHome string) receiver.Logs {
+	t.Helper()
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
+	require.NoError(t, err)
+	require.NoError(t, rcvr.Start(context.Background(), nil))
+	t.Cleanup(func() { _ = rcvr.Shutdown(context.Background()) })
+	return rcvr
 }
 
 type fakeSubReceiverFactory struct {

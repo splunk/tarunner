@@ -209,6 +209,17 @@ func readConfFiles(paths []string) ([][]byte, error) {
 	return payloads, nil
 }
 
+// WatchDirs returns the directories to watch for filesystem changes under splunkHome:
+// etc/apps (for TA add/remove) and the system conf layers.
+func WatchDirs(splunkHome string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	return []string{
+		filepath.Join(etcDir, "apps"),
+		filepath.Join(etcDir, "system", "default"),
+		filepath.Join(etcDir, "system", "local"),
+	}
+}
+
 // ConfDirs returns the Splunk btool conf search path for splunkHome.
 func ConfDirs(splunkHome string) []string {
 	return splunkHomeDirs(splunkHome)
@@ -240,6 +251,42 @@ func ReadInputs(dirs []string) ([]conf.Input, error) {
 		layers = append(layers, inputs)
 	}
 	return conf.MergeInputs(layers), nil
+}
+
+// ReadInputsForTA merges inputs.conf for a single TA with the system conf
+// layers, returning only stanzas defined in the TA's own dirs. System layers
+// contribute parameter overrides but cannot inject new stanzas.
+func ReadInputsForTA(splunkHome, taDir string) ([]conf.Input, error) {
+	taDirs := []string{filepath.Join(taDir, "default"), filepath.Join(taDir, "local")}
+	allDirs := taDirsWithSystem(splunkHome, taDir)
+
+	// First pass: collect stanza names defined in the TA's own dirs.
+	taInputs, err := ReadInputs(taDirs)
+	if err != nil {
+		return nil, err
+	}
+	if len(taInputs) == 0 {
+		return nil, nil
+	}
+	taDefined := make(map[string]struct{}, len(taInputs))
+	for _, input := range taInputs {
+		taDefined[input.Configuration.Stanza.Name] = struct{}{}
+	}
+
+	// Second pass: merge all layers (including system) for full precedence.
+	merged, err := ReadInputs(allDirs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter to only stanzas the TA itself defines.
+	filtered := merged[:0]
+	for _, input := range merged {
+		if _, ok := taDefined[input.Configuration.Stanza.Name]; ok {
+			filtered = append(filtered, input)
+		}
+	}
+	return filtered, nil
 }
 
 // ReadTransforms discovers and merges transforms.conf files from the given
