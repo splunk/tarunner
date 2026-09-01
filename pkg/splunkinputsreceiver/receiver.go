@@ -94,6 +94,9 @@ func (r *splunkInputsReceiver) watchLoop(ctx context.Context) {
 				return
 			}
 			switch {
+			case event.Name == appsDir:
+				// apps dir itself was created — use sentinel to trigger reconcile
+				pending[""] = struct{}{}
 			case strings.HasPrefix(event.Name, systemDir):
 				// system conf change affects all TAs — use sentinel
 				pending[""] = struct{}{}
@@ -137,6 +140,9 @@ func taDirFromPath(eventPath, appsDir string) string {
 
 func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string]struct{}) {
 	logger := r.handler.settings.Logger
+
+	// best-effort: add appsDir to the watcher in case it was created after Start
+	_ = r.watcher.Add(filepath.Join(r.splunkHome, "etc", "apps"))
 
 	current, err := tabuilder.DiscoverTAs(r.splunkHome)
 	if err != nil {

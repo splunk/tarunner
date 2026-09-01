@@ -210,10 +210,12 @@ func readConfFiles(paths []string) ([][]byte, error) {
 }
 
 // WatchDirs returns the directories to watch for filesystem changes under splunkHome:
-// etc/apps (for TA add/remove) and the system conf layers.
+// etc itself (to detect apps/ being created), etc/apps (for TA add/remove),
+// and the system conf layers.
 func WatchDirs(splunkHome string) []string {
 	etcDir := filepath.Join(splunkHome, "etc")
 	return []string{
+		etcDir, // watch etc itself to detect apps/ being created
 		filepath.Join(etcDir, "apps"),
 		filepath.Join(etcDir, "system", "default"),
 		filepath.Join(etcDir, "system", "local"),
