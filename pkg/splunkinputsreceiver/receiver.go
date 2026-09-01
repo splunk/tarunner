@@ -55,8 +55,7 @@ func (r *splunkInputsReceiver) Start(ctx context.Context, host component.Host) e
 		_ = watcher.Add(dir) // best-effort; dirs may not exist yet
 	}
 	for _, taDir := range taDirs {
-		_ = watcher.Add(filepath.Join(taDir, "default"))
-		_ = watcher.Add(filepath.Join(taDir, "local"))
+		r.watchTA(taDir)
 	}
 
 	go r.watchLoop(ctx)
@@ -103,8 +102,18 @@ func (r *splunkInputsReceiver) watchLoop(ctx context.Context) {
 			case strings.HasPrefix(event.Name, appsDir):
 				rel, _ := filepath.Rel(appsDir, event.Name)
 				if !strings.Contains(rel, string(filepath.Separator)) {
-					// direct child of appsDir — TA directory added or removed
-					pending[""] = struct{}{}
+					// event on a direct child of appsDir — either a TA dir being
+					// added/removed (sentinel) or an existing TA dir being modified
+					// (e.g. local/ created inside it — targeted reload)
+					taDir := filepath.Join(appsDir, rel)
+					r.handler.Lock()
+					_, known := r.handler.active[taDir]
+					r.handler.Unlock()
+					if known {
+						pending[taDir] = struct{}{}
+					} else {
+						pending[""] = struct{}{}
+					}
 				} else {
 					// event inside a TA's default/ or local/ — target just that TA
 					pending[taDirFromPath(event.Name, appsDir)] = struct{}{}
@@ -122,6 +131,15 @@ func (r *splunkInputsReceiver) watchLoop(ctx context.Context) {
 			pending = map[string]struct{}{}
 		}
 	}
+}
+
+// watchTA adds a TA directory and its default/ and local/ subdirs to the watcher.
+// All adds are best-effort — default/ or local/ may not exist yet. Watching taDir
+// itself ensures we detect when they are created later.
+func (r *splunkInputsReceiver) watchTA(taDir string) {
+	_ = r.watcher.Add(taDir)
+	_ = r.watcher.Add(filepath.Join(taDir, "default"))
+	_ = r.watcher.Add(filepath.Join(taDir, "local"))
 }
 
 // taDirFromPath returns the TA root directory from an event path under appsDir,
@@ -183,13 +201,16 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 			logger.Error("splunk_inputs: failed to start receivers for new TAs", zap.Error(err))
 		}
 		for _, taDir := range added {
-			_ = r.watcher.Add(filepath.Join(taDir, "default"))
-			_ = r.watcher.Add(filepath.Join(taDir, "local"))
+			r.watchTA(taDir)
 		}
 	}
 	if len(changed) > 0 {
 		if err := r.handler.OnChange(ctx, changed); err != nil {
 			logger.Error("splunk_inputs: failed to reload receivers for changed TAs", zap.Error(err))
+		}
+		// retry watching default/ and local/ in case they were just created
+		for _, taDir := range changed {
+			r.watchTA(taDir)
 		}
 	}
 }
