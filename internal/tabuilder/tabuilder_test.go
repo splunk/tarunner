@@ -93,10 +93,10 @@ func TestReadInputsForTA(t *testing.T) {
 	tests := []struct {
 		name               string
 		splunkHome         string
-		expectedCount      int
 		expectedStanza     string
 		expectedIndex      string
 		expectedSourcetype string
+		expectedCount      int
 	}{
 		{
 			name:           "ta_default_only",
