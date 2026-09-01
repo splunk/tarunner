@@ -1,0 +1,21 @@
+# One of 'breaking', 'deprecation', 'new_component', 'enhancement', 'bug_fix'
+change_type: enhancement
+
+# The name of the component, or a single word describing the area of concern, (e.g. crosslink)
+component: splunk_inputs
+
+# A brief description of the change.  Surround your text with quotes ("") if it needs to start with a backtick (`).
+note: watch TA directories for configuration changes and hot-reload receivers without restarting the collector
+
+# One or more tracking issues related to the change
+issues: [122]
+
+# (Optional) One or more lines of additional information to render under the primary note.
+# These lines will be padded with 2 spaces and then inserted directly into the document.
+# Use pipe (|) for multiline entries.
+subtext: |
+  The receiver now monitors `$SPLUNK_HOME/etc/apps` for TA additions, removals, and `inputs.conf` changes.
+  Changes to `etc/system` conf layers also trigger a full reload of all TAs.
+  File-system events are debounced (500 ms) before reconciliation.
+  The `etc/apps` directory is watched even when it does not exist at start-up.
+  Per-TA `default/` and `local/` subdirectories are registered as soon as they appear.
