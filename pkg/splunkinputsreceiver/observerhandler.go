@@ -8,6 +8,7 @@ import (
 	"errors"
 	"sync"
 
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
@@ -18,6 +19,7 @@ import (
 type observerHandler struct {
 	sync.Mutex
 	splunkHome string
+	host       component.Host
 	options    factoryOptions
 	settings   receiver.Settings
 	next       consumer.Logs
@@ -62,7 +64,7 @@ func (h *observerHandler) add(ctx context.Context, taDirs []string) error {
 		if _, ok := h.active[taDir]; ok {
 			continue
 		}
-		rcvrs, err := h.options.startReceivers(ctx, h.splunkHome, taDir, h.next, h.settings)
+		rcvrs, err := h.options.startReceivers(ctx, h.host, h.splunkHome, taDir, h.next, h.settings)
 		if err != nil {
 			errs = append(errs, err)
 			continue

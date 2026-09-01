@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
@@ -94,7 +93,7 @@ func (o factoryOptions) createLogsFunc(_ context.Context, settings receiver.Sett
 	return newSplunkInputsReceiver(splunkHome, o, settings, logs), nil
 }
 
-func (o factoryOptions) startReceivers(ctx context.Context, splunkHome, taDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
+func (o factoryOptions) startReceivers(ctx context.Context, host component.Host, splunkHome, taDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
 	inputs, err := tabuilder.ReadInputsForTA(splunkHome, taDir)
 	if err != nil {
 		return nil, err
@@ -114,7 +113,7 @@ func (o factoryOptions) startReceivers(ctx context.Context, splunkHome, taDir st
 	}
 	var started []receiver.Logs
 	for _, r := range rcvrs {
-		if err := r.Start(ctx, componenttest.NewNopHost()); err != nil {
+		if err := r.Start(ctx, host); err != nil {
 			settings.Logger.Error("splunk_inputs: failed to start receiver",
 				zap.String("ta", taDir), zap.Error(err))
 			continue

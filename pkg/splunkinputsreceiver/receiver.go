@@ -35,7 +35,8 @@ func newSplunkInputsReceiver(splunkHome string, options factoryOptions, settings
 	}
 }
 
-func (r *splunkInputsReceiver) Start(ctx context.Context, _ component.Host) error {
+func (r *splunkInputsReceiver) Start(ctx context.Context, host component.Host) error {
+	r.handler.host = host
 	taDirs, err := tabuilder.DiscoverTAs(r.splunkHome)
 	if err != nil {
 		return err

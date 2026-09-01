@@ -87,6 +87,21 @@ func newTestSplunkInputsReceiver(t *testing.T, splunkHome string, factory *mockS
 	return r
 }
 
+func TestShutdownWithoutStart(t *testing.T) {
+	splunkHome := t.TempDir()
+	factory := newMockFactory()
+	options := newFactoryOptions(WithSubReceiver(factory))
+	settings := receiver.Settings{
+		ID:                component.MustNewID("splunk_inputs"),
+		TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()},
+	}
+	r := newSplunkInputsReceiver(splunkHome, options, settings, testNopConsumer{})
+
+	// Start was never called — watcher is nil, doneCh was never started.
+	// Shutdown must return without blocking.
+	require.NoError(t, r.Shutdown(context.Background()))
+}
+
 func TestReconcile(t *testing.T) {
 	t.Run("adds_new_ta", func(t *testing.T) {
 		splunkHome := t.TempDir()
