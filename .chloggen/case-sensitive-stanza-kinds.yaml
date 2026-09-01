@@ -8,7 +8,7 @@ component: stanza
 note: preserve stanza kind casing to match Splunk UF case-sensitive behavior
 
 # One or more tracking issues related to the change
-issues: []
+issues: [124]
 
 # (Optional) One or more lines of additional information to render under the primary note.
 # These lines will be padded with 2 spaces and then inserted directly into the document.

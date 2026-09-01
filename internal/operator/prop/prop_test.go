@@ -6,8 +6,9 @@ package prop
 import (
 	"testing"
 
-	"github.com/splunk/tarunner/internal/featuregates"
 	"go.opentelemetry.io/collector/featuregate"
+
+	"github.com/splunk/tarunner/internal/featuregates"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -70,8 +71,8 @@ func TestCreateProps(t *testing.T) {
 func TestCreatePropsMatchExpressions(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
-		prop     conf.Prop
 		expected string
+		prop     conf.Prop
 	}{
 		{
 			name:     "source",
