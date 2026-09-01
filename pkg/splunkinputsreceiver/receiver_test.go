@@ -172,6 +172,57 @@ func TestReconcile(t *testing.T) {
 		assert.Contains(t, r.handler.active, ta2)
 	})
 
+	t.Run("watches_ta_subdirs_on_add", func(t *testing.T) {
+		splunkHome := t.TempDir()
+		factory := newMockFactory()
+		r := newTestSplunkInputsReceiver(t, splunkHome, factory)
+
+		taDir := makeTA(t, splunkHome, "splunk_ta_syslog")
+
+		r.reconcile(context.Background(), map[string]struct{}{})
+
+		watched := r.watcher.WatchList()
+		assert.Contains(t, watched, taDir, "TA dir itself should be watched")
+		assert.Contains(t, watched, filepath.Join(taDir, "default"), "TA default/ should be watched")
+	})
+
+	t.Run("retries_watching_ta_subdirs_on_change", func(t *testing.T) {
+		splunkHome := t.TempDir()
+		factory := newMockFactory()
+		r := newTestSplunkInputsReceiver(t, splunkHome, factory)
+
+		taDir := makeTA(t, splunkHome, "splunk_ta_syslog")
+
+		mock := &mockReceiver{}
+		r.handler.active[taDir] = []receiver.Logs{mock}
+
+		// create local/ after initial setup — simulates it being added later
+		localDir := filepath.Join(taDir, "local")
+		require.NoError(t, os.MkdirAll(localDir, 0o755))
+
+		r.reconcile(context.Background(), map[string]struct{}{taDir: {}})
+
+		watched := r.watcher.WatchList()
+		assert.Contains(t, watched, localDir, "local/ should be watched after it is created")
+	})
+
+	t.Run("watches_apps_dir_after_late_creation", func(t *testing.T) {
+		splunkHome := t.TempDir()
+		factory := newMockFactory()
+		r := newTestSplunkInputsReceiver(t, splunkHome, factory)
+
+		// appsDir does not exist yet — watcher.Add silently failed at Start time
+		appsDir := filepath.Join(splunkHome, "etc", "apps")
+
+		// create appsDir with a TA — simulates apps/ being created after Start
+		makeTA(t, splunkHome, "splunk_ta_syslog")
+
+		r.reconcile(context.Background(), map[string]struct{}{"": {}})
+
+		assert.Contains(t, r.watcher.WatchList(), appsDir, "apps/ should be watched after it is created")
+		assert.Len(t, r.handler.active, 1, "TA should be discovered and started")
+	})
+
 	t.Run("unrelated_ta_is_not_reloaded", func(t *testing.T) {
 		splunkHome := t.TempDir()
 		factory := newMockFactory()
