@@ -72,6 +72,17 @@ func TestWithSubExporterRegistersCustomScheme(t *testing.T) {
 	require.Equal(t, "splunk:9997", fake.requests[0].Output.Configuration.Stanza.Params.Get("server").Value)
 }
 
+func TestWithSubExporterDoesNotMatchCaseVariantScheme(t *testing.T) {
+	baseDir := writeTA(t, "[S2S://primary]\nserver = splunk:9997\n")
+	fake := &fakeSubExporterFactory{scheme: "s2s"}
+
+	factory := splunkoutputsexporter.NewFactory(splunkoutputsexporter.WithSubExporter(fake))
+	exp, err := factory.CreateLogs(context.Background(), newExporterSettings(), splunkoutputsexporter.Config{BaseDir: baseDir})
+	require.NoError(t, err)
+	require.NotNil(t, exp)
+	require.Empty(t, fake.requests)
+}
+
 func TestWithSubExporterSkipsUnsupportedScheme(t *testing.T) {
 	baseDir := writeTA(t, "[tcpout:primary]\nserver = splunk:9997\n")
 

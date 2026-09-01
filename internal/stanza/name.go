@@ -28,12 +28,12 @@ func ParseName(raw string) (Name, error) {
 		if kind == "" {
 			return Name{}, errEmptyKind
 		}
-		return Name{Kind: strings.ToLower(kind), Target: target}, nil
+		return Name{Kind: kind, Target: target}, nil
 	}
 
 	for _, kind := range []string{"tcp", "udp"} {
-		if strings.HasPrefix(strings.ToLower(raw), kind+":") {
-			return Name{Kind: kind, Target: raw[len(kind)+1:]}, nil
+		if len(raw) > len(kind) && raw[len(kind)] == ':' && strings.EqualFold(raw[:len(kind)], kind) {
+			return Name{Kind: raw[:len(kind)], Target: raw[len(kind)+1:]}, nil
 		}
 	}
 
@@ -53,15 +53,15 @@ func ParseOutputName(raw string) (Name, error) {
 		if kind == "" {
 			return Name{}, errEmptyKind
 		}
-		return Name{Kind: strings.ToLower(kind), Target: target}, nil
+		return Name{Kind: kind, Target: target}, nil
 	}
 	if kind, target, ok := strings.Cut(raw, ":"); ok {
 		if kind == "" {
 			return Name{}, errEmptyKind
 		}
-		return Name{Kind: strings.ToLower(kind), Target: target}, nil
+		return Name{Kind: kind, Target: target}, nil
 	}
-	return Name{Kind: strings.ToLower(raw)}, nil
+	return Name{Kind: raw}, nil
 }
 
 // ListenAddress converts Splunk's port-only network stanza form to the
