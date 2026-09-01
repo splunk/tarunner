@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/splunk/tarunner v0.5.1
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/collector/component v1.65.0
 	go.opentelemetry.io/collector/consumer v1.65.0
 	go.opentelemetry.io/collector/exporter v1.65.0
