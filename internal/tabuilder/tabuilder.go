@@ -327,9 +327,9 @@ func CreateOutputExporter(output *conf.Output, logger *zap.Logger, telemetrySett
 func newHECExporter(o *conf.Output, logger *zap.Logger, telemetrySettings component.TelemetrySettings) (exporter.Logs, error) {
 	f := splunkhecexporter.NewFactory()
 	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
-	cfg.Endpoint = outputParam(o, "uri")
+	cfg.ClientConfig.Endpoint = outputParam(o, "uri")
 	cfg.Token = configopaque.String(outputParam(o, "httpEventCollectorToken"))
-	cfg.TLS = configtls.ClientConfig{InsecureSkipVerify: true} // TODO: wire sslVerifyServerCert from outputs.conf
+	cfg.ClientConfig.TLS = configtls.ClientConfig{InsecureSkipVerify: true} // TODO: wire sslVerifyServerCert from outputs.conf
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
