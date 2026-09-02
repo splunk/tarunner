@@ -19,7 +19,7 @@ import (
 func newHECExporter(logger *zap.Logger, endpoint, token string) (exporter.Logs, error) {
 	f := splunkhecexporter.NewFactory()
 	cfg := f.CreateDefaultConfig().(*splunkhecexporter.Config)
-	cfg.Endpoint = endpoint
+	cfg.ClientConfig.Endpoint = endpoint
 	cfg.Token = configopaque.String(token)
 	if err := cfg.Validate(); err != nil {
 		return nil, err

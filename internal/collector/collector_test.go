@@ -224,7 +224,7 @@ func TestUseUDP(t *testing.T) {
 func TestRunScriptedInputsWithHEC(t *testing.T) {
 	logsSink := &consumertest.LogsSink{}
 	cfg := splunkhecreceiver.NewFactory().CreateDefaultConfig().(*splunkhecreceiver.Config)
-	cfg.NetAddr.Endpoint = "localhost:1341"
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:1341"
 	rcvr, err := splunkhecreceiver.NewFactory().CreateLogs(context.Background(), receivertest.NewNopSettings(splunkhecreceiver.NewFactory().Type()), cfg, logsSink)
 	require.NoError(t, err)
 	err = rcvr.Start(context.Background(), componenttest.NewNopHost())
