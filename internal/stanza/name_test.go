@@ -14,11 +14,11 @@ func TestParseName(t *testing.T) {
 		name   string
 		parsed Name
 	}{
-		{name: "WinEventLog://DFS some name", parsed: Name{Kind: "wineventlog", Target: "DFS some name"}},
+		{name: "WinEventLog://DFS some name", parsed: Name{Kind: "WinEventLog", Target: "DFS some name"}},
 		{name: "monitor:///var/log/splunk/*.log", parsed: Name{Kind: "monitor", Target: "/var/log/splunk/*.log"}},
 		{name: `monitor://C:\Program Files\Splunk\splunkd.log`, parsed: Name{Kind: "monitor", Target: `C:\Program Files\Splunk\splunkd.log`}},
 		{name: "tcp://:9997", parsed: Name{Kind: "tcp", Target: ":9997"}},
-		{name: "UDP:514", parsed: Name{Kind: "udp", Target: "514"}},
+		{name: "UDP:514", parsed: Name{Kind: "UDP", Target: "514"}},
 		{name: "my_script", parsed: Name{Target: "my_script"}},
 	}
 
@@ -45,7 +45,7 @@ func TestParseOutputName(t *testing.T) {
 		{name: "tcpout:primary", parsed: Name{Kind: "tcpout", Target: "primary"}},
 		{name: "s2s://primary", parsed: Name{Kind: "s2s", Target: "primary"}},
 		{name: "tcpout-server://splunk:9997", parsed: Name{Kind: "tcpout-server", Target: "splunk:9997"}},
-		{name: "S2S:Primary", parsed: Name{Kind: "s2s", Target: "Primary"}},
+		{name: "S2S:Primary", parsed: Name{Kind: "S2S", Target: "Primary"}},
 	}
 
 	for _, test := range tests {

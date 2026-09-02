@@ -6,7 +6,6 @@ package splunkoutputsexporter
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
@@ -35,8 +34,8 @@ type ExporterRequest struct {
 
 // SubExporterFactory creates a logs exporter for one outputs.conf stanza kind.
 //
-// Scheme returns the output stanza kind to match. Schemes are normalized to
-// lower-case before matching.
+// Scheme returns the output stanza kind to match. Kinds are matched
+// case-sensitively, matching Splunk UF behavior.
 type SubExporterFactory interface {
 	Scheme() string
 	CreateLogs(context.Context, exporter.Settings, ExporterRequest) (exporter.Logs, error)
@@ -52,7 +51,7 @@ func WithSubExporter(f SubExporterFactory) Option {
 		if f == nil {
 			return
 		}
-		o.subExporters[strings.ToLower(f.Scheme())] = f
+		o.subExporters[f.Scheme()] = f
 	}
 }
 

@@ -6,7 +6,6 @@ package splunkinputsreceiver
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -43,9 +42,9 @@ type ReceiverRequest struct {
 
 // SubReceiverFactory creates a logs receiver for one inputs.conf stanza kind.
 //
-// Scheme returns the stanza kind to match. Kinds are normalized to lower-case
-// before matching. Returning "script" handles both script:// stanzas and empty-kind modular input
-// stanzas.
+// Scheme returns the stanza kind to match. Kinds are matched case-sensitively,
+// matching Splunk UF behavior. Returning "script" handles both script:// stanzas and
+// empty-kind modular input stanzas.
 type SubReceiverFactory interface {
 	Scheme() string
 	CreateLogs(context.Context, receiver.Settings, ReceiverRequest, consumer.Logs) (receiver.Logs, error)
@@ -61,7 +60,7 @@ func WithSubReceiver(f SubReceiverFactory) Option {
 		if f == nil {
 			return
 		}
-		o.subReceivers[strings.ToLower(f.Scheme())] = f
+		o.subReceivers[f.Scheme()] = f
 	}
 }
 

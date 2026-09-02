@@ -67,3 +67,38 @@ func TestCreateProps(t *testing.T) {
 	require.Equal(t, []string{"foo-end"}, ops[4].Builder.(*copy.Config).OutputIDs)
 	require.Equal(t, "foo-end", ops[5].Builder.(*noop.Config).OperatorID)
 }
+
+func TestCreatePropsMatchExpressions(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		expected string
+		prop     conf.Prop
+	}{
+		{
+			name:     "source",
+			prop:     conf.Prop{Name: "source::/var/log/app.log"},
+			expected: `attributes['source'] == "source::/var/log/app.log"`,
+		},
+		{
+			name:     "sourcetype",
+			prop:     conf.Prop{Name: "syslog"},
+			expected: `attributes['sourcetype'] == "syslog"`,
+		},
+		{
+			name:     "host",
+			prop:     conf.Prop{Name: "host::foo"},
+			expected: `attributes['host'] == "host::foo"`,
+		},
+		{
+			name:     "host with case-sensitive option",
+			prop:     conf.Prop{Name: "host::(?-i)foo"},
+			expected: `attributes['host'] == "host::(?-i)foo"`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ops := CreateOperatorConfigs(tc.prop, nil)
+			expr := ops[0].Builder.(*noop.Config).IfExpr
+			require.Equal(t, tc.expected, expr)
+		})
+	}
+}

@@ -44,17 +44,15 @@ func TestWithSubReceiverOverridesBuiltInAndHandlesEmptySchemeAsScript(t *testing
 	require.Equal(t, "modinput", fake.request.Input.Configuration.Stanza.Name)
 }
 
-func TestWithSubReceiverMatchesNormalizedScheme(t *testing.T) {
+func TestWithSubReceiverDoesNotMatchCaseVariantScheme(t *testing.T) {
 	splunkHome := writeTA(t, "[Custom://thing]\n")
 	fake := &fakeSubReceiverFactory{scheme: "custom"}
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
-	rcvr := createAndStart(t, factory, splunkHome)
-	require.NotNil(t, rcvr)
-	require.True(t, fake.called)
-	require.Equal(t, filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test"), fake.request.BaseDir)
-	require.Equal(t, "thing", fake.request.Path)
-	require.Equal(t, "Custom://thing", fake.request.Input.Configuration.Stanza.Name)
+	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
+	require.ErrorContains(t, err, `unsupported scheme "Custom"`)
+	require.Nil(t, rcvr)
+	require.False(t, fake.called)
 }
 
 func TestWithSubReceiverRejectsUnsupportedScheme(t *testing.T) {
