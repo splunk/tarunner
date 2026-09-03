@@ -88,6 +88,90 @@ func TestReadOutputGroups(t *testing.T) {
 	assert.Equal(t, "splunk:9997", requireOutputParam(t, &outputs[0], "server"))
 }
 
+func TestReadInputsForTA(t *testing.T) {
+	rootDir := filepath.Join("testdata", "inputs")
+	tests := []struct {
+		name               string
+		splunkHome         string
+		expectedStanza     string
+		expectedIndex      string
+		expectedSourcetype string
+		expectedCount      int
+	}{
+		{
+			name:           "ta_default_only",
+			splunkHome:     filepath.Join(rootDir, "ta_default_only"),
+			expectedCount:  1,
+			expectedStanza: "monitor:///var/log/syslog",
+			expectedIndex:  "main",
+		},
+		{
+			name:           "ta_local_overrides_ta_default",
+			splunkHome:     filepath.Join(rootDir, "ta_local_overrides"),
+			expectedCount:  1,
+			expectedStanza: "monitor:///var/log/syslog",
+			expectedIndex:  "local_index",
+		},
+		{
+			name:           "ta_default_wins_over_system_default",
+			splunkHome:     filepath.Join(rootDir, "system_default_overrides"),
+			expectedCount:  1,
+			expectedStanza: "monitor:///var/log/syslog",
+			expectedIndex:  "ta_index",
+		},
+		{
+			name:           "system_local_wins_over_all",
+			splunkHome:     filepath.Join(rootDir, "system_local_wins"),
+			expectedCount:  1,
+			expectedStanza: "monitor:///var/log/syslog",
+			expectedIndex:  "system_local_index",
+		},
+		{
+			name:          "system_stanza_not_in_ta_is_excluded",
+			splunkHome:    filepath.Join(rootDir, "system_stanza_excluded"),
+			expectedCount: 1,
+			// only the TA's stanza is returned, not the system-only one
+			expectedStanza: "monitor:///var/log/syslog",
+		},
+		{
+			name:               "system_default_adds_missing_param",
+			splunkHome:         filepath.Join(rootDir, "system_adds_param"),
+			expectedCount:      1,
+			expectedStanza:     "monitor:///var/log/syslog",
+			expectedSourcetype: "syslog",
+			expectedIndex:      "system_index",
+		},
+		{
+			name:          "no_inputs_returns_nil",
+			splunkHome:    filepath.Join(rootDir, "no_inputs"),
+			expectedCount: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taDir := filepath.Join(test.splunkHome, "etc", "apps", "splunk_ta_test")
+			inputs, err := ReadInputsForTA(test.splunkHome, taDir)
+			require.NoError(t, err)
+			require.Len(t, inputs, test.expectedCount)
+			if test.expectedCount == 0 {
+				return
+			}
+			assert.Equal(t, test.expectedStanza, inputs[0].Configuration.Stanza.Name)
+			if test.expectedIndex != "" {
+				param := inputs[0].Configuration.Stanza.Params.Get("index")
+				require.NotNil(t, param)
+				assert.Equal(t, test.expectedIndex, param.Value)
+			}
+			if test.expectedSourcetype != "" {
+				param := inputs[0].Configuration.Stanza.Params.Get("sourcetype")
+				require.NotNil(t, param)
+				assert.Equal(t, test.expectedSourcetype, param.Value)
+			}
+		})
+	}
+}
+
 func TestReadTransforms(t *testing.T) {
 	rootDir := filepath.Join("testdata", "transforms")
 	tests := []struct {

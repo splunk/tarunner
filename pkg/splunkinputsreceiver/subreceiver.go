@@ -81,7 +81,7 @@ func newFactoryOptions(opts ...Option) factoryOptions {
 	return options
 }
 
-func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
+func (o factoryOptions) createLogsFunc(_ context.Context, settings receiver.Settings, config component.Config, logs consumer.Logs) (receiver.Logs, error) {
 	cfg := config.(Config)
 
 	splunkHome, err := tabuilder.ResolveSplunkHome(cfg.BaseDir)
@@ -89,33 +89,37 @@ func (o factoryOptions) createLogsFunc(ctx context.Context, settings receiver.Se
 		return nil, fmt.Errorf("splunk_inputs: %w", err)
 	}
 
-	taDirs, err := tabuilder.DiscoverTAs(splunkHome)
+	return newSplunkInputsReceiver(splunkHome, o, settings, logs), nil
+}
+
+func (o factoryOptions) startReceivers(ctx context.Context, host component.Host, splunkHome, taDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
+	inputs, err := tabuilder.ReadInputsForTA(splunkHome, taDir)
 	if err != nil {
 		return nil, err
 	}
-
-	var allReceivers []receiver.Logs
-	for _, taDir := range taDirs {
-		dirs := tabuilder.ConfDirsWithSystem(splunkHome, taDir)
-		inputs, err := tabuilder.ReadInputs(dirs)
-		if err != nil {
-			return nil, err
-		}
-		transforms, err := tabuilder.ReadTransforms(dirs)
-		if err != nil {
-			return nil, err
-		}
-		props, err := tabuilder.ReadProps(dirs)
-		if err != nil {
-			return nil, err
-		}
-		receivers, err := o.createReceivers(ctx, inputs, transforms, props, taDir, logs, settings)
-		if err != nil {
-			return nil, err
-		}
-		allReceivers = append(allReceivers, receivers...)
+	dirs := tabuilder.ConfDirsWithSystem(splunkHome, taDir)
+	transforms, err := tabuilder.ReadTransforms(dirs)
+	if err != nil {
+		return nil, err
 	}
-	return packReceivers(allReceivers), nil
+	props, err := tabuilder.ReadProps(dirs)
+	if err != nil {
+		return nil, err
+	}
+	rcvrs, err := o.createReceivers(ctx, inputs, transforms, props, taDir, next, settings)
+	if err != nil {
+		return nil, err
+	}
+	var started []receiver.Logs
+	for _, r := range rcvrs {
+		if err := r.Start(ctx, host); err != nil {
+			settings.Logger.Error("splunk_inputs: failed to start receiver",
+				zap.String("ta", taDir), zap.Error(err))
+			continue
+		}
+		started = append(started, r)
+	}
+	return started, nil
 }
 
 func (o factoryOptions) createReceivers(ctx context.Context, inputs []Input, transforms []Transform, props []Prop, baseDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
