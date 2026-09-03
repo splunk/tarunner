@@ -177,8 +177,8 @@ func TestReadSystemInputs(t *testing.T) {
 	tests := []struct {
 		name           string
 		splunkHome     string
-		expectedCount  int
 		expectedStanza string
+		expectedCount  int
 	}{
 		{
 			name:          "no_system_inputs_returns_nil",
