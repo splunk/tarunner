@@ -186,10 +186,10 @@ func TestReadSystemInputs(t *testing.T) {
 			expectedCount: 0,
 		},
 		{
-			name:           "system_only_stanza_is_returned",
+			name:           "returns_system_only_stanza_not_owned_by_ta",
 			splunkHome:     filepath.Join(rootDir, "system_stanza_excluded"),
 			expectedCount:  1,
-			expectedStanza: "monitor:///var/log/auth.log", // syslog is TA-owned so excluded
+			expectedStanza: "monitor:///var/log/auth.log",
 		},
 	}
 

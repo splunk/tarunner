@@ -93,8 +93,9 @@ func (o factoryOptions) createLogsFunc(_ context.Context, settings receiver.Sett
 	return newSplunkInputsReceiver(splunkHome, o, settings, logs), nil
 }
 
-// systemKey is a sentinel taDir value meaning "system stanzas only".
-const systemKey = ""
+// systemKey is a sentinel used in handler.active to track system-only stanzas
+// (those defined in etc/system but not owned by any TA).
+const systemKey = "\x00system"
 
 func (o factoryOptions) startReceivers(ctx context.Context, host component.Host, splunkHome, taDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
 	var inputs []Input
