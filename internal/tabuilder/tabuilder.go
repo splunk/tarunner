@@ -255,6 +255,48 @@ func ReadInputs(dirs []string) ([]conf.Input, error) {
 	return conf.MergeInputs(layers), nil
 }
 
+// ReadSystemInputs returns inputs.conf stanzas defined only in etc/system,
+// excluding any stanza already owned by a TA. These are run once globally.
+func ReadSystemInputs(splunkHome string) ([]conf.Input, error) {
+	etcDir := filepath.Join(splunkHome, "etc")
+	systemDirs := []string{
+		filepath.Join(etcDir, "system", "default"),
+		filepath.Join(etcDir, "system", "local"),
+	}
+	systemInputs, err := ReadInputs(systemDirs)
+	if err != nil {
+		return nil, err
+	}
+	if len(systemInputs) == 0 {
+		return nil, nil
+	}
+
+	taDirs, err := DiscoverTAs(splunkHome)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect stanza names owned by any TA so we can exclude them.
+	taOwned := map[string]struct{}{}
+	for _, taDir := range taDirs {
+		inputs, err := ReadInputs([]string{filepath.Join(taDir, "default"), filepath.Join(taDir, "local")})
+		if err != nil {
+			return nil, err
+		}
+		for _, input := range inputs {
+			taOwned[input.Configuration.Stanza.Name] = struct{}{}
+		}
+	}
+
+	filtered := systemInputs[:0]
+	for _, input := range systemInputs {
+		if _, owned := taOwned[input.Configuration.Stanza.Name]; !owned {
+			filtered = append(filtered, input)
+		}
+	}
+	return filtered, nil
+}
+
 // ReadInputsForTA merges inputs.conf for a single TA with the system conf
 // layers, returning only stanzas defined in the TA's own dirs. System layers
 // contribute parameter overrides but cannot inject new stanzas.

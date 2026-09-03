@@ -172,6 +172,39 @@ func TestReadInputsForTA(t *testing.T) {
 	}
 }
 
+func TestReadSystemInputs(t *testing.T) {
+	rootDir := filepath.Join("testdata", "inputs")
+	tests := []struct {
+		name           string
+		splunkHome     string
+		expectedCount  int
+		expectedStanza string
+	}{
+		{
+			name:          "no_system_inputs_returns_nil",
+			splunkHome:    filepath.Join(rootDir, "no_inputs"),
+			expectedCount: 0,
+		},
+		{
+			name:           "system_only_stanza_is_returned",
+			splunkHome:     filepath.Join(rootDir, "system_stanza_excluded"),
+			expectedCount:  1,
+			expectedStanza: "monitor:///var/log/auth.log", // syslog is TA-owned so excluded
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			inputs, err := ReadSystemInputs(test.splunkHome)
+			require.NoError(t, err)
+			require.Len(t, inputs, test.expectedCount)
+			if test.expectedStanza != "" {
+				assert.Equal(t, test.expectedStanza, inputs[0].Configuration.Stanza.Name)
+			}
+		})
+	}
+}
+
 func TestReadTransforms(t *testing.T) {
 	rootDir := filepath.Join("testdata", "transforms")
 	tests := []struct {

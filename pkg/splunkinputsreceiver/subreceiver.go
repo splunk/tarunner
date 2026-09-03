@@ -6,6 +6,7 @@ package splunkinputsreceiver
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -92,12 +93,27 @@ func (o factoryOptions) createLogsFunc(_ context.Context, settings receiver.Sett
 	return newSplunkInputsReceiver(splunkHome, o, settings, logs), nil
 }
 
+// systemKey is a sentinel taDir value meaning "system stanzas only".
+const systemKey = ""
+
 func (o factoryOptions) startReceivers(ctx context.Context, host component.Host, splunkHome, taDir string, next consumer.Logs, settings receiver.Settings) ([]receiver.Logs, error) {
-	inputs, err := tabuilder.ReadInputsForTA(splunkHome, taDir)
+	var inputs []Input
+	var dirs []string
+	var err error
+	if taDir == systemKey {
+		inputs, err = tabuilder.ReadSystemInputs(splunkHome)
+		etcDir := filepath.Join(splunkHome, "etc")
+		dirs = []string{
+			filepath.Join(etcDir, "system", "default"),
+			filepath.Join(etcDir, "system", "local"),
+		}
+	} else {
+		inputs, err = tabuilder.ReadInputsForTA(splunkHome, taDir)
+		dirs = tabuilder.ConfDirsWithSystem(splunkHome, taDir)
+	}
 	if err != nil {
 		return nil, err
 	}
-	dirs := tabuilder.ConfDirsWithSystem(splunkHome, taDir)
 	transforms, err := tabuilder.ReadTransforms(dirs)
 	if err != nil {
 		return nil, err

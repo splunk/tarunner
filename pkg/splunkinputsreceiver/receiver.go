@@ -41,7 +41,8 @@ func (r *splunkInputsReceiver) Start(ctx context.Context, host component.Host) e
 	if err != nil {
 		return err
 	}
-	if err := r.handler.OnAdd(ctx, taDirs); err != nil {
+	// Start system stanzas once, independently of any TA.
+	if err := r.handler.OnAdd(ctx, append([]string{systemKey}, taDirs...)); err != nil {
 		return err
 	}
 
@@ -178,6 +179,12 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 	r.handler.Lock()
 	var removed, added, changed []string
 	for taDir := range r.handler.active {
+		if taDir == systemKey {
+			if allTAs {
+				changed = append(changed, systemKey)
+			}
+			continue
+		}
 		if _, ok := desired[taDir]; !ok {
 			removed = append(removed, taDir)
 		} else if allTAs {
