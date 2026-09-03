@@ -169,7 +169,8 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 		return
 	}
 
-	desired := make(map[string]struct{}, len(current))
+	desired := make(map[string]struct{}, len(current)+1)
+	desired[systemKey] = struct{}{} // system stanzas are always desired
 	for _, d := range current {
 		desired[d] = struct{}{}
 	}
@@ -178,24 +179,23 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 
 	r.handler.Lock()
 	var removed, added, changed []string
-	if _, ok := r.handler.active[systemKey]; ok {
-		if allTAs {
-			changed = append(changed, systemKey)
-		}
-	} else {
-		added = append(added, systemKey)
-	}
+	taChanged := false
 	for taDir := range r.handler.active {
-		if taDir == systemKey {
-			continue
-		}
 		if _, ok := desired[taDir]; !ok {
 			removed = append(removed, taDir)
 		} else if allTAs {
 			changed = append(changed, taDir)
 		} else if _, ok := pending[taDir]; ok {
 			changed = append(changed, taDir)
+			if taDir != systemKey {
+				taChanged = true
+			}
 		}
+	}
+	// A TA change may have altered stanza ownership (e.g. stanza commented out
+	// from TA is now system-only), so reload system stanzas too.
+	if taChanged {
+		changed = append(changed, systemKey)
 	}
 	for taDir := range desired {
 		if _, ok := r.handler.active[taDir]; !ok {
