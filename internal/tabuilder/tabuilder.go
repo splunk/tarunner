@@ -184,6 +184,14 @@ func splunkHomeDirs(splunkHome string) []string {
 	return dirs
 }
 
+func systemDirs(splunkHome string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	return []string{
+		filepath.Join(etcDir, "system", "default"),
+		filepath.Join(etcDir, "system", "local"),
+	}
+}
+
 func taDirsWithSystem(splunkHome, taDir string) []string {
 	etcDir := filepath.Join(splunkHome, "etc")
 	return []string{
@@ -227,6 +235,11 @@ func ConfDirs(splunkHome string) []string {
 	return splunkHomeDirs(splunkHome)
 }
 
+// SystemDirs returns the system conf directories for splunkHome in precedence order.
+func SystemDirs(splunkHome string) []string {
+	return systemDirs(splunkHome)
+}
+
 // ConfDirsWithSystem returns the Splunk btool conf search path for a single TA merged with system config.
 func ConfDirsWithSystem(splunkHome, taDir string) []string {
 	return taDirsWithSystem(splunkHome, taDir)
@@ -258,12 +271,7 @@ func ReadInputs(dirs []string) ([]conf.Input, error) {
 // ReadSystemInputs returns inputs.conf stanzas defined only in etc/system,
 // excluding any stanza already owned by a TA. These are run once globally.
 func ReadSystemInputs(splunkHome string) ([]conf.Input, error) {
-	etcDir := filepath.Join(splunkHome, "etc")
-	systemDirs := []string{
-		filepath.Join(etcDir, "system", "default"),
-		filepath.Join(etcDir, "system", "local"),
-	}
-	systemInputs, err := ReadInputs(systemDirs)
+	systemInputs, err := ReadInputs(systemDirs(splunkHome))
 	if err != nil {
 		return nil, err
 	}

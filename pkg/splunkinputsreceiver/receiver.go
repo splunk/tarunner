@@ -194,7 +194,8 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 	}
 	// A TA change may have altered stanza ownership (e.g. stanza commented out
 	// from TA is now system-only), so reload system stanzas too.
-	if taChanged {
+	// Skip if allTAs is set — systemKey is already in changed via that path.
+	if taChanged && !allTAs {
 		changed = append(changed, systemKey)
 	}
 	for taDir := range desired {

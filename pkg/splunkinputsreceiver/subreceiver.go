@@ -6,7 +6,6 @@ package splunkinputsreceiver
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -103,11 +102,7 @@ func (o factoryOptions) startReceivers(ctx context.Context, host component.Host,
 	var err error
 	if taDir == systemKey {
 		inputs, err = tabuilder.ReadSystemInputs(splunkHome)
-		etcDir := filepath.Join(splunkHome, "etc")
-		dirs = []string{
-			filepath.Join(etcDir, "system", "default"),
-			filepath.Join(etcDir, "system", "local"),
-		}
+		dirs = tabuilder.SystemDirs(splunkHome)
 	} else {
 		inputs, err = tabuilder.ReadInputsForTA(splunkHome, taDir)
 		dirs = tabuilder.ConfDirsWithSystem(splunkHome, taDir)
