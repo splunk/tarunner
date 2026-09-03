@@ -178,11 +178,15 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 
 	r.handler.Lock()
 	var removed, added, changed []string
+	if _, ok := r.handler.active[systemKey]; ok {
+		if allTAs {
+			changed = append(changed, systemKey)
+		}
+	} else {
+		added = append(added, systemKey)
+	}
 	for taDir := range r.handler.active {
 		if taDir == systemKey {
-			if allTAs {
-				changed = append(changed, systemKey)
-			}
 			continue
 		}
 		if _, ok := desired[taDir]; !ok {
