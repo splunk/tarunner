@@ -28,13 +28,13 @@ import (
 
 	"go.opentelemetry.io/collector/receiver"
 
-	"github.com/splunk/tarunner/internal/receiver/batchreceiver"
-	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
-	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
-	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
-	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
-	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
 	"github.com/splunk/tarunner/pkg/splunkta/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/batchreceiver"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/monitorreceiver"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/scriptreceiver"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/tcpreceiver"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/udpreceiver"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/wineventlogreceiver"
 	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 )
 
