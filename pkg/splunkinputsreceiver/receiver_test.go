@@ -70,6 +70,19 @@ func makeTA(t *testing.T, splunkHome, taName string) string {
 	return filepath.Join(splunkHome, "etc", "apps", taName)
 }
 
+// makeSystemInput writes a system-level inputs.conf with a single monitor stanza
+// under splunkHome/etc/system/local so ReadSystemInputs returns a system-only stanza.
+func makeSystemInput(t *testing.T, splunkHome, target string) {
+	t.Helper()
+	systemLocal := filepath.Join(splunkHome, "etc", "system", "local")
+	require.NoError(t, os.MkdirAll(systemLocal, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(systemLocal, "inputs.conf"),
+		[]byte("[monitor://"+target+"]\nsourcetype = syslog\n"),
+		0o600,
+	))
+}
+
 // newTestSplunkInputsReceiver builds a splunkInputsReceiver wired with the given mock factory
 // and a real (but idle) fsnotify watcher so reconcile can call watcher.Add without panicking.
 func newTestSplunkInputsReceiver(t *testing.T, splunkHome string, factory *mockSubReceiverFactory) *splunkInputsReceiver {
@@ -221,6 +234,69 @@ func TestReconcile(t *testing.T) {
 
 		assert.Contains(t, r.watcher.WatchList(), appsDir, "apps/ should be watched after it is created")
 		assert.Len(t, r.handler.active, 1, "TA should be discovered and started")
+	})
+
+	t.Run("ta_removal_reloads_system_stanzas", func(t *testing.T) {
+		splunkHome := t.TempDir()
+		factory := newMockFactory()
+		r := newTestSplunkInputsReceiver(t, splunkHome, factory)
+
+		taDir := makeTA(t, splunkHome, "splunk_ta_syslog")
+		// a system-only stanza (distinct target) so ReadSystemInputs re-adds systemKey
+		makeSystemInput(t, splunkHome, "/var/log/messages")
+
+		// system stanzas are active alongside the TA (systemKey owns its own stanza)
+		taMock, sysMock := &mockReceiver{}, &mockReceiver{}
+		r.handler.active[taDir] = []receiver.Logs{taMock}
+		r.handler.active[systemKey] = []receiver.Logs{sysMock}
+
+		// delete the TA — a known TA's removal is routed to pending[taDir], not the
+		// "" sentinel, so allTAs is false. The stanza it owned may now be system-only.
+		require.NoError(t, os.RemoveAll(filepath.Join(splunkHome, "etc", "apps", "splunk_ta_syslog")))
+
+		r.reconcile(context.Background(), map[string]struct{}{taDir: {}})
+
+		assert.Equal(t, 1, taMock.shutdownCount, "removed TA should be stopped")
+		assert.Equal(t, 1, sysMock.shutdownCount, "system stanzas should be reloaded after TA removal")
+		assert.Contains(t, r.handler.active, systemKey, "system stanzas should stay active")
+	})
+
+	t.Run("targeted_ta_change_reloads_system_stanzas", func(t *testing.T) {
+		splunkHome := t.TempDir()
+		factory := newMockFactory()
+		r := newTestSplunkInputsReceiver(t, splunkHome, factory)
+
+		taDir := makeTA(t, splunkHome, "splunk_ta_syslog")
+		makeSystemInput(t, splunkHome, "/var/log/messages")
+
+		taMock, sysMock := &mockReceiver{}, &mockReceiver{}
+		r.handler.active[taDir] = []receiver.Logs{taMock}
+		r.handler.active[systemKey] = []receiver.Logs{sysMock}
+
+		// an in-place TA edit (targeted, not the "" sentinel) may drop a stanza
+		// that then becomes system-only.
+		r.reconcile(context.Background(), map[string]struct{}{taDir: {}})
+
+		assert.Equal(t, 1, taMock.shutdownCount, "changed TA should be reloaded")
+		assert.Equal(t, 1, sysMock.shutdownCount, "system stanzas should be reloaded on a targeted TA change")
+	})
+
+	t.Run("targeted_ta_change_without_active_system_skips_system_reload", func(t *testing.T) {
+		splunkHome := t.TempDir()
+		factory := newMockFactory()
+		r := newTestSplunkInputsReceiver(t, splunkHome, factory)
+
+		taDir := makeTA(t, splunkHome, "splunk_ta_syslog")
+
+		// systemKey is not active (all system stanzas were TA-owned, or none exist).
+		// A targeted TA change must not conjure a systemKey reload it cannot serve.
+		taMock := &mockReceiver{}
+		r.handler.active[taDir] = []receiver.Logs{taMock}
+
+		r.reconcile(context.Background(), map[string]struct{}{taDir: {}})
+
+		assert.Equal(t, 1, taMock.shutdownCount, "changed TA should be reloaded")
+		assert.NotContains(t, r.handler.active, systemKey, "systemKey must not be started when there are no system-only stanzas")
 	})
 
 	t.Run("unrelated_ta_is_not_reloaded", func(t *testing.T) {
