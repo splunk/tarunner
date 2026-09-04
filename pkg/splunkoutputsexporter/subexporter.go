@@ -11,9 +11,9 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"go.uber.org/zap"
 
-	"github.com/splunk/tarunner/internal/tabuilder"
 	"github.com/splunk/tarunner/pkg/splunkta/conf"
 	"github.com/splunk/tarunner/pkg/splunkta/stanza"
+	"github.com/splunk/tarunner/pkg/splunkta/tabuilder"
 )
 
 type (

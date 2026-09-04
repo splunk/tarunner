@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/internal/config"
-	"github.com/splunk/tarunner/internal/tabuilder"
+	"github.com/splunk/tarunner/pkg/splunkta/tabuilder"
 )
 
 // Run runs the collector with a baseDir working directory and an OTLP endpoint.
