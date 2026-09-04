@@ -13,6 +13,4 @@ issues: [126]
 # (Optional) One or more lines of additional information to render under the primary note.
 # These lines will be padded with 2 spaces and then inserted directly into the document.
 # Use pipe (|) for multiline entries.
-subtext: |
-  Previously only an in-place TA modification triggered a system reload. A full TA add or removal changes
-  stanza ownership too, but left the system layer stale until an unrelated later event forced a reconcile.
+subtext:
