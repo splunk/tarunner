@@ -172,6 +172,43 @@ func TestReadInputsForTA(t *testing.T) {
 	}
 }
 
+func TestReadSystemInputs(t *testing.T) {
+	rootDir := filepath.Join("testdata", "inputs")
+	tests := []struct {
+		name            string
+		splunkHome      string
+		expectedStanzas []string
+	}{
+		{
+			name:       "no_system_inputs_returns_nil",
+			splunkHome: filepath.Join(rootDir, "no_inputs"),
+		},
+		{
+			name:            "returns_system_only_stanza_not_owned_by_ta",
+			splunkHome:      filepath.Join(rootDir, "system_stanza_excluded"),
+			expectedStanzas: []string{"monitor:///var/log/auth.log"},
+		},
+		{
+			name:       "excludes_stanza_owned_by_ta_returns_only_unowned",
+			splunkHome: filepath.Join(rootDir, "system_stanza_owned_by_ta"),
+			// monitor:///var/log/syslog is defined in the TA and must be excluded;
+			// monitor:///var/log/auth.log is system-only and must be returned.
+			expectedStanzas: []string{"monitor:///var/log/auth.log"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			inputs, err := ReadSystemInputs(test.splunkHome)
+			require.NoError(t, err)
+			require.Len(t, inputs, len(test.expectedStanzas))
+			for i, stanza := range test.expectedStanzas {
+				assert.Equal(t, stanza, inputs[i].Configuration.Stanza.Name)
+			}
+		})
+	}
+}
+
 func TestReadTransforms(t *testing.T) {
 	rootDir := filepath.Join("testdata", "transforms")
 	tests := []struct {

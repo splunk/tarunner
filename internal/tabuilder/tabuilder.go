@@ -184,6 +184,14 @@ func splunkHomeDirs(splunkHome string) []string {
 	return dirs
 }
 
+func systemDirs(splunkHome string) []string {
+	etcDir := filepath.Join(splunkHome, "etc")
+	return []string{
+		filepath.Join(etcDir, "system", "default"),
+		filepath.Join(etcDir, "system", "local"),
+	}
+}
+
 func taDirsWithSystem(splunkHome, taDir string) []string {
 	etcDir := filepath.Join(splunkHome, "etc")
 	return []string{
@@ -227,6 +235,11 @@ func ConfDirs(splunkHome string) []string {
 	return splunkHomeDirs(splunkHome)
 }
 
+// SystemDirs returns the system conf directories for splunkHome in precedence order.
+func SystemDirs(splunkHome string) []string {
+	return systemDirs(splunkHome)
+}
+
 // ConfDirsWithSystem returns the Splunk btool conf search path for a single TA merged with system config.
 func ConfDirsWithSystem(splunkHome, taDir string) []string {
 	return taDirsWithSystem(splunkHome, taDir)
@@ -253,6 +266,43 @@ func ReadInputs(dirs []string) ([]conf.Input, error) {
 		layers = append(layers, inputs)
 	}
 	return conf.MergeInputs(layers), nil
+}
+
+// ReadSystemInputs returns inputs.conf stanzas defined only in etc/system,
+// excluding any stanza already owned by a TA. These are run once globally.
+func ReadSystemInputs(splunkHome string) ([]conf.Input, error) {
+	systemInputs, err := ReadInputs(systemDirs(splunkHome))
+	if err != nil {
+		return nil, err
+	}
+	if len(systemInputs) == 0 {
+		return nil, nil
+	}
+
+	taDirs, err := DiscoverTAs(splunkHome)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect stanza names owned by any TA so we can exclude them.
+	taOwned := map[string]struct{}{}
+	for _, taDir := range taDirs {
+		inputs, err := ReadInputs([]string{filepath.Join(taDir, "default"), filepath.Join(taDir, "local")})
+		if err != nil {
+			return nil, err
+		}
+		for _, input := range inputs {
+			taOwned[input.Configuration.Stanza.Name] = struct{}{}
+		}
+	}
+
+	filtered := systemInputs[:0]
+	for _, input := range systemInputs {
+		if _, owned := taOwned[input.Configuration.Stanza.Name]; !owned {
+			filtered = append(filtered, input)
+		}
+	}
+	return filtered, nil
 }
 
 // ReadInputsForTA merges inputs.conf for a single TA with the system conf

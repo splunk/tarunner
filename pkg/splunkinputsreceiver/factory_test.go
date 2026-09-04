@@ -50,8 +50,10 @@ func TestWithSubReceiverDoesNotMatchCaseVariantScheme(t *testing.T) {
 
 	factory := splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake))
 	rcvr, err := factory.CreateLogs(context.Background(), newReceiverSettings(), splunkinputsreceiver.Config{BaseDir: splunkHome}, nopConsumer{})
+	require.NoError(t, err)
+	require.NotNil(t, rcvr)
+	err = rcvr.Start(context.Background(), nil)
 	require.ErrorContains(t, err, `unsupported scheme "Custom"`)
-	require.Nil(t, rcvr)
 	require.False(t, fake.called)
 }
 
@@ -74,6 +76,27 @@ func TestWithSubReceiverSkipsDisabledCustomStanza(t *testing.T) {
 	rcvr := createAndStart(t, factory, splunkHome)
 	require.NotNil(t, rcvr)
 	require.False(t, fake.called)
+}
+
+func TestSystemAndTAStanzasBothFire(t *testing.T) {
+	splunkHome := t.TempDir()
+
+	// TA stanza
+	taDefaultDir := filepath.Join(splunkHome, "etc", "apps", "Splunk_TA_test", "default")
+	require.NoError(t, os.MkdirAll(taDefaultDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(taDefaultDir, "inputs.conf"),
+		[]byte("[custom:///ta-thing]\nsourcetype = ta\n"), 0o600))
+
+	// system-only stanza (not in any TA)
+	systemLocalDir := filepath.Join(splunkHome, "etc", "system", "local")
+	require.NoError(t, os.MkdirAll(systemLocalDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(systemLocalDir, "inputs.conf"),
+		[]byte("[custom:///system-thing]\nsourcetype = system\n"), 0o600))
+
+	fake := &fakeSubReceiverFactory{scheme: "custom"}
+	rcvr := createAndStart(t, splunkinputsreceiver.NewFactory(splunkinputsreceiver.WithSubReceiver(fake)), splunkHome)
+	require.NotNil(t, rcvr)
+	require.Equal(t, 2, fake.callCount)
 }
 
 func TestWithSubReceiverRequestIncludesPropsAndTransforms(t *testing.T) {
@@ -107,9 +130,10 @@ func createAndStart(t *testing.T, factory receiver.Factory, splunkHome string) r
 }
 
 type fakeSubReceiverFactory struct {
-	scheme  string
-	called  bool
-	request splunkinputsreceiver.ReceiverRequest
+	scheme    string
+	called    bool
+	callCount int
+	request   splunkinputsreceiver.ReceiverRequest
 }
 
 func (f *fakeSubReceiverFactory) Scheme() string {
@@ -118,6 +142,7 @@ func (f *fakeSubReceiverFactory) Scheme() string {
 
 func (f *fakeSubReceiverFactory) CreateLogs(_ context.Context, _ receiver.Settings, request splunkinputsreceiver.ReceiverRequest, _ consumer.Logs) (receiver.Logs, error) {
 	f.called = true
+	f.callCount++
 	f.request = request
 	return fakeReceiver{}, nil
 }

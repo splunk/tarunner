@@ -41,7 +41,8 @@ func (r *splunkInputsReceiver) Start(ctx context.Context, host component.Host) e
 	if err != nil {
 		return err
 	}
-	if err := r.handler.OnAdd(ctx, taDirs); err != nil {
+	// Start system stanzas once, independently of any TA.
+	if err := r.handler.OnAdd(ctx, append([]string{systemKey}, taDirs...)); err != nil {
 		return err
 	}
 
@@ -168,7 +169,8 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 		return
 	}
 
-	desired := make(map[string]struct{}, len(current))
+	desired := make(map[string]struct{}, len(current)+1)
+	desired[systemKey] = struct{}{} // system stanzas are always desired
 	for _, d := range current {
 		desired[d] = struct{}{}
 	}
@@ -177,6 +179,7 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 
 	r.handler.Lock()
 	var removed, added, changed []string
+	taChanged := false
 	for taDir := range r.handler.active {
 		if _, ok := desired[taDir]; !ok {
 			removed = append(removed, taDir)
@@ -184,7 +187,16 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 			changed = append(changed, taDir)
 		} else if _, ok := pending[taDir]; ok {
 			changed = append(changed, taDir)
+			if taDir != systemKey {
+				taChanged = true
+			}
 		}
+	}
+	// A TA change may have altered stanza ownership (e.g. stanza commented out
+	// from TA is now system-only), so reload system stanzas too.
+	// Skip if allTAs is set — systemKey is already in changed via that path.
+	if taChanged && !allTAs {
+		changed = append(changed, systemKey)
 	}
 	for taDir := range desired {
 		if _, ok := r.handler.active[taDir]; !ok {
