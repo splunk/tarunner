@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
 func requireOutputParam(t *testing.T, output *conf.Output, name string) string {

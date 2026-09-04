@@ -6,7 +6,7 @@ package prop
 import (
 	"fmt"
 
-	"github.com/splunk/tarunner/internal/featuregates"
+	"github.com/splunk/tarunner/pkg/splunkta/featuregates"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -16,7 +16,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/copy"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 )

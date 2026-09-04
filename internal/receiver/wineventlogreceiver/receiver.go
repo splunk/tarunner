@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 
 	"github.com/splunk/tarunner/internal/operator/prop"
-	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 )
 
 type welreceiver struct{}

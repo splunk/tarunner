@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.uber.org/zap"
 
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
 func Test_ScriptedInput(t *testing.T) {

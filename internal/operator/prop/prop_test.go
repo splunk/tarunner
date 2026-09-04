@@ -8,7 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/featuregate"
 
-	"github.com/splunk/tarunner/internal/featuregates"
+	"github.com/splunk/tarunner/pkg/splunkta/featuregates"
 
 	"github.com/splunk/tarunner/internal/operator/transform"
 
@@ -17,7 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
 func TestCreateProps(t *testing.T) {

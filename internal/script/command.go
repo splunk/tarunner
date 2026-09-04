@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/splunk/tarunner/internal/conf"
-	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 )
 
 func DetermineCommandName(baseDir string, input conf.Input) (string, error) {
