@@ -8,7 +8,7 @@ import (
 
 	"github.com/splunk/tarunner/pkg/splunkta/featuregates"
 
-	"github.com/splunk/tarunner/internal/operator/transform"
+	"github.com/splunk/tarunner/pkg/splunkta/operator/transform"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"

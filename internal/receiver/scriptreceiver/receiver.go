@@ -13,9 +13,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"go.opentelemetry.io/collector/component"
 
-	"github.com/splunk/tarunner/internal/operator/prop"
+	"github.com/splunk/tarunner/pkg/splunkta/operator/prop"
 
-	"github.com/splunk/tarunner/internal/scriptedinput"
+	"github.com/splunk/tarunner/pkg/splunkta/scriptedinput"
 )
 
 type scriptReceiver struct{}

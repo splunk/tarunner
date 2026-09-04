@@ -18,8 +18,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
-	"github.com/splunk/tarunner/internal/operator/prop"
-	"github.com/splunk/tarunner/internal/script"
+	"github.com/splunk/tarunner/pkg/splunkta/operator/prop"
+	"github.com/splunk/tarunner/pkg/splunkta/script"
 )
 
 type batch struct {
