@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/splunk/tarunner/internal/script"
+	"github.com/splunk/tarunner/pkg/splunkta/script"
 	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
