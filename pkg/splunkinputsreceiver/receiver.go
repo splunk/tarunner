@@ -179,28 +179,42 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 
 	r.handler.Lock()
 	var removed, added, changed []string
-	taChanged := false
+	// ownershipChanged tracks whether any TA was added, removed, or modified.
+	// Any of those may shift stanza ownership between a TA and the system layer,
+	// so system stanzas must be reloaded too. systemKey itself never counts.
+	ownershipChanged := false
 	for taDir := range r.handler.active {
 		if _, ok := desired[taDir]; !ok {
 			removed = append(removed, taDir)
+			if taDir != systemKey {
+				ownershipChanged = true
+			}
 		} else if allTAs {
 			changed = append(changed, taDir)
 		} else if _, ok := pending[taDir]; ok {
 			changed = append(changed, taDir)
 			if taDir != systemKey {
-				taChanged = true
+				ownershipChanged = true
 			}
 		}
-	}
-	// A TA change may have altered stanza ownership (e.g. stanza commented out
-	// from TA is now system-only), so reload system stanzas too.
-	// Skip if allTAs is set — systemKey is already in changed via that path.
-	if taChanged && !allTAs {
-		changed = append(changed, systemKey)
 	}
 	for taDir := range desired {
 		if _, ok := r.handler.active[taDir]; !ok {
 			added = append(added, taDir)
+			if taDir != systemKey {
+				ownershipChanged = true
+			}
+		}
+	}
+	// A TA add, remove, or in-place change may have altered stanza ownership
+	// (e.g. a stanza dropped from a TA is now system-only, or a new TA claims a
+	// stanza that was system-only), so reload system stanzas too. Skip if allTAs
+	// is set — systemKey is already in changed via that path. When systemKey is
+	// not yet active (all system stanzas were TA-owned), the added loop above
+	// already reloads it, so only schedule a reload when it is currently active.
+	if ownershipChanged && !allTAs {
+		if _, ok := r.handler.active[systemKey]; ok {
+			changed = append(changed, systemKey)
 		}
 	}
 	r.handler.Unlock()
