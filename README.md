@@ -55,7 +55,7 @@ In this mode, the TA runner performs the steps of the UF mode and additional per
 
 HF mode is experimental and incomplete. This [issue](https://github.com/splunk/tarunner/issues/9) tracks the work.
 
-The mode can be enabled by running the runner with `--feature-flags +cook`.
+The mode can be enabled by running the runner with `--feature-gates +enableDataCooking`.
 
 # License
 

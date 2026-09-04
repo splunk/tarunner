@@ -40,7 +40,7 @@ func CreateOperatorConfigs(pCfg conf.Prop, transforms []conf.Transform) []operat
 	var previous *helper.WriterConfig
 	previous = &start.WriterConfig
 
-	if featuregates.CookFeatureGate.IsEnabled() {
+	if featuregates.EnableDataCookingFeatureGate.IsEnabled() {
 		// TODO implement a split parser.
 		//if !pCfg.ShouldLineMerge {
 		//
