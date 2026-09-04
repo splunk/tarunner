@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
 func TestDetermineCommandNameWindows(t *testing.T) {

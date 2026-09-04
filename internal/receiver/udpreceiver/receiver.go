@@ -12,7 +12,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 
 	"github.com/splunk/tarunner/internal/operator/prop"
-	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"

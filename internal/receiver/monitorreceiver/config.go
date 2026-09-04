@@ -4,7 +4,7 @@
 package monitorreceiver
 
 import (
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
 type Config struct {

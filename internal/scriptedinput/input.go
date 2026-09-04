@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/splunk/tarunner/internal/script"
-	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"go.uber.org/zap"
 
-	"github.com/splunk/tarunner/internal/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
 type ScriptedInput struct {

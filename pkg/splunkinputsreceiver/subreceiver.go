@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/splunk/tarunner/internal/conf"
-	"github.com/splunk/tarunner/internal/stanza"
 	"github.com/splunk/tarunner/internal/tabuilder"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 )
 
 type (

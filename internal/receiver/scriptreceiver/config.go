@@ -3,7 +3,7 @@
 
 package scriptreceiver
 
-import "github.com/splunk/tarunner/internal/conf"
+import "github.com/splunk/tarunner/pkg/splunkta/conf"
 
 type Config struct {
 	conf.Input `mapstructure:"-"`

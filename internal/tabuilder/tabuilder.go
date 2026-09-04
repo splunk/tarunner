@@ -28,14 +28,14 @@ import (
 
 	"go.opentelemetry.io/collector/receiver"
 
-	"github.com/splunk/tarunner/internal/conf"
 	"github.com/splunk/tarunner/internal/receiver/batchreceiver"
 	"github.com/splunk/tarunner/internal/receiver/monitorreceiver"
 	"github.com/splunk/tarunner/internal/receiver/scriptreceiver"
 	"github.com/splunk/tarunner/internal/receiver/tcpreceiver"
 	"github.com/splunk/tarunner/internal/receiver/udpreceiver"
 	"github.com/splunk/tarunner/internal/receiver/wineventlogreceiver"
-	"github.com/splunk/tarunner/internal/stanza"
+	"github.com/splunk/tarunner/pkg/splunkta/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/stanza"
 )
 
 // ResolveSplunkHome returns baseDir if set, otherwise falls back to $SPLUNK_HOME.
