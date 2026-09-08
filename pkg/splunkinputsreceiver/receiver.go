@@ -179,28 +179,36 @@ func (r *splunkInputsReceiver) reconcile(ctx context.Context, pending map[string
 
 	r.handler.Lock()
 	var removed, added, changed []string
-	taChanged := false
+	ownershipChanged := false
 	for taDir := range r.handler.active {
 		if _, ok := desired[taDir]; !ok {
 			removed = append(removed, taDir)
+			if taDir != systemKey {
+				ownershipChanged = true
+			}
 		} else if allTAs {
 			changed = append(changed, taDir)
 		} else if _, ok := pending[taDir]; ok {
 			changed = append(changed, taDir)
 			if taDir != systemKey {
-				taChanged = true
+				ownershipChanged = true
 			}
 		}
-	}
-	// A TA change may have altered stanza ownership (e.g. stanza commented out
-	// from TA is now system-only), so reload system stanzas too.
-	// Skip if allTAs is set — systemKey is already in changed via that path.
-	if taChanged && !allTAs {
-		changed = append(changed, systemKey)
 	}
 	for taDir := range desired {
 		if _, ok := r.handler.active[taDir]; !ok {
 			added = append(added, taDir)
+			if taDir != systemKey {
+				ownershipChanged = true
+			}
+		}
+	}
+	// Any TA transition may shift stanza ownership to or from the system layer,
+	// so reload system stanzas too. Skip when allTAs is set (systemKey is already
+	// in changed) or systemKey is inactive (the added loop reloads it).
+	if ownershipChanged && !allTAs {
+		if _, ok := r.handler.active[systemKey]; ok {
+			changed = append(changed, systemKey)
 		}
 	}
 	r.handler.Unlock()
