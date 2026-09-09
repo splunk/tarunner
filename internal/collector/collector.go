@@ -12,8 +12,9 @@ import (
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 
+	"github.com/signalfx/splunk-otel-collector/pkg/splunkta/tabuilder"
+
 	"github.com/splunk/tarunner/internal/config"
-	"github.com/splunk/tarunner/pkg/splunkta/tabuilder"
 )
 
 // Run runs the collector with a baseDir working directory and an OTLP endpoint.
