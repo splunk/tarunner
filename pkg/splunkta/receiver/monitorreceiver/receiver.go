@@ -113,8 +113,17 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		}
 	}
 	oc.Include = []string{allowlist}
+	t.logger.Info("monitor receiver include pattern",
+		zap.String("stanza", rcfg.Input.Configuration.Stanza.Name),
+		zap.String("path", path),
+		zap.String("include", allowlist),
+	)
 	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isGlobPattern(b.Value) {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
+		t.logger.Info("monitor receiver exclude pattern",
+			zap.String("stanza", rcfg.Input.Configuration.Stanza.Name),
+			zap.String("exclude", oc.Exclude[0]),
+		)
 	}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.
