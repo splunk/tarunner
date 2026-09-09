@@ -4,6 +4,7 @@
 package monitorreceiver
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -102,9 +103,14 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		// under the directory.
 		allowlist = filepath.Join(path, "*")
 	default:
-		// No whitelist param at all: path may be a specific file, a directory,
-		// or already a glob — use it as-is.
-		allowlist = path
+		// No whitelist param: if the path is a directory, expand to dir/* so
+		// filelog can match files inside it. If it's a specific file (or the
+		// path doesn't exist yet), use it as-is.
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			allowlist = filepath.Join(path, "*")
+		} else {
+			allowlist = path
+		}
 	}
 	oc.Include = []string{allowlist}
 	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isGlobPattern(b.Value) {

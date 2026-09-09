@@ -143,6 +143,44 @@ func TestMonitorDirectoryEmptyWhitelist(t *testing.T) {
 	require.Equal(t, "otel_nix", received.Attributes["index"])
 }
 
+// TestMonitorDirectoryNoWhitelist covers the case where the local overlay only
+// sets disabled=0 and index, and the TA default has no whitelist param at all.
+// The receiver must detect that the path is a directory and expand it to dir/*.
+func TestMonitorDirectoryNoWhitelist(t *testing.T) {
+	tempDir := t.TempDir()
+
+	cfg := Config{
+		Input: conf.Input{
+			Configuration: conf.Configuration{
+				Stanza: conf.Stanza{
+					Name: fmt.Sprintf("monitor://%s", tempDir),
+					Params: conf.Params{
+						conf.Param{Name: "index", Value: "otel_nix"},
+					},
+				},
+			},
+		},
+	}
+	logger, _ := zap.NewDevelopment()
+	c := monitor{logger: logger}.InputConfig(cfg)
+	o, err := c.Build(component.TelemetrySettings{
+		Logger:         logger,
+		TracerProvider: nooptrace.NewTracerProvider(),
+		MeterProvider:  noopmetric.NewMeterProvider(),
+		Resource:       pcommon.NewResource(),
+	})
+	require.NoError(t, err)
+	output := testutil.NewFakeOutput(t)
+	o.SetOutputIDs([]string{"fake"})
+	require.NoError(t, o.SetOutputs([]operator.Operator{output}))
+	require.NoError(t, o.Start(nil))
+	defer func() { require.NoError(t, o.Stop()) }()
+
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "syslog"), []byte("hello log\n"), 0o644))
+	received := <-output.Received
+	require.Equal(t, "hello log\n", received.Body)
+}
+
 func TestReadFile(t *testing.T) {
 	tempDir := t.TempDir()
 
