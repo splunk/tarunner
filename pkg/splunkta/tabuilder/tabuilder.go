@@ -5,7 +5,7 @@
 // the per-input logs receivers and per-output logs exporters. It is the single
 // source of truth for the stanza -> component mapping, shared by the standalone
 // collector runner (internal/collector) and the OTel plugins
-// (pkg/splunkinputsreceiver, pkg/splunkoutputsexporter).
+// (pkg/splunkinputsreceiver).
 package tabuilder
 
 import (
