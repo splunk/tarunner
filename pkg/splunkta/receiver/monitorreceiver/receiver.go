@@ -5,6 +5,7 @@ package monitorreceiver
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
@@ -79,12 +80,35 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		t.logger.Error("error reading command", zap.Error(err))
 		return operator.NewConfig(oc)
 	}
-	allowlist := path
-	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil {
+	// pathIsGlob reports whether the path already contains glob metacharacters
+	// (e.g. monitor:///home/*/.bash_history). In that case filelog can use it
+	// directly without further expansion.
+	pathIsGlob := strings.ContainsAny(path, "*?[")
+
+	w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist")
+	var allowlist string
+	switch {
+	case pathIsGlob:
+		// Path is already a glob pattern — use it as-is; whitelist is ignored
+		// because there is no sensible directory to join it against.
+		allowlist = path
+	case w != nil && w.Value != "":
+		// whitelist is a glob pattern relative to the monitored directory
+		// (e.g. "*.log"). Splunk also supports regex here, but glob is the
+		// common case and what filelog's Include field accepts.
 		allowlist = filepath.Join(path, w.Value)
+	case w != nil:
+		// whitelist param is present but empty: the stanza targets a directory
+		// and wants all files inside it. A bare directory is not a valid filelog
+		// glob — append /* to match files directly under the directory.
+		allowlist = filepath.Join(path, "*")
+	default:
+		// No whitelist param at all: path may be a specific file, a directory,
+		// or already a glob — use it as-is.
+		allowlist = path
 	}
 	oc.Include = []string{allowlist}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil {
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && b.Value != "" {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
 	}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
