@@ -144,6 +144,25 @@ func TestMergeInputsFullOverride(t *testing.T) {
 	assert.Equal(t, "index_override", merged[0].Configuration.Stanza.Params.Get("index").Value)
 }
 
+func TestIsDisabled(t *testing.T) {
+	cases := []struct {
+		value    string
+		disabled bool
+	}{
+		{"1", true},
+		{"true", true},
+		{"0", false},
+		{"false", false},
+		{"", false},
+	}
+	for _, tc := range cases {
+		s := Stanza{Params: Params{{Name: "disabled", Value: tc.value}}}
+		assert.Equal(t, tc.disabled, s.IsDisabled(), "disabled=%q", tc.value)
+	}
+	// No disabled param at all.
+	assert.False(t, (&Stanza{}).IsDisabled())
+}
+
 func TestToXML(t *testing.T) {
 	testStr := `<?xml version="1.0" encoding="UTF-8"?>
 <Input>

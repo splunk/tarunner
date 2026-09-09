@@ -24,10 +24,10 @@ type Input struct {
 	Configuration Configuration `xml:"configuration"`
 }
 
-// IsDisabled reports whether the stanza has disabled=1.
+// IsDisabled reports whether the stanza has disabled=1 or disabled=true.
 func (s *Stanza) IsDisabled() bool {
 	p := s.Params.Get("disabled")
-	return p != nil && p.Value == "1"
+	return p != nil && (p.Value == "1" || p.Value == "true")
 }
 
 func ReadInput(payload []byte, appDir string) ([]Input, error) {
