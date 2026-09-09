@@ -26,17 +26,17 @@ import (
 	"github.com/splunk/tarunner/pkg/splunkta/conf"
 )
 
-// TestMonitorDirectoryWithSplunkRegexWhitelist tests the exact Splunk_TA_nix default stanza:
+// TestMonitorDirectoryWithSplunkRegexWhitelist tests the exact Splunk_TA_nix default stanza
+// merged with a local overlay that only sets disabled=0 and index:
 //
-//	[monitor:///var/log]
+//	[monitor:///var/log]                          # default TA layer
 //	whitelist=(\.log|log$|messages|secure|auth|mesg$|cron$|acpid$|\.out)
 //	blacklist=(lastlog|anaconda\.syslog)
 //
-// Splunk whitelist/blacklist values are regexes, not globs. Since filelog's Include/Exclude
-// only accept glob patterns, the regex is used as a filepath.Join component which produces
-// an invalid path (dir/(\.log|log$|...)) that never matches real files.
-// This test documents the known limitation: the non-empty regex whitelist does NOT work.
-// The fix is to set whitelist= (empty) in the TA overlay, tested by TestMonitorDirectoryEmptyWhitelist.
+// The whitelist/blacklist values are PCRE regexes, not globs. The receiver detects
+// this and falls back to dir/* so that all files are ingested (the TA overlay is
+// expected to narrow scope via a glob whitelist if needed, but must not break the
+// common case where no overlay whitelist is set).
 func TestMonitorDirectoryWithSplunkRegexWhitelist(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -73,19 +73,24 @@ func TestMonitorDirectoryWithSplunkRegexWhitelist(t *testing.T) {
 	require.NoError(t, o.Start(nil))
 	defer func() { require.NoError(t, o.Stop()) }()
 
-	// Write files that would match the Splunk whitelist regex.
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "syslog.log"), []byte("line1\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "auth"), []byte("line2\n"), 0o644))
 
-	// The regex whitelist is not a valid glob, so no files are matched and nothing is ingested.
-	// This test asserts the known broken behaviour so any future fix is immediately visible:
-	// if a file IS received, regex whitelist handling has been improved and this test needs updating.
-	select {
-	case got := <-output.Received:
-		t.Logf("NOTE: regex whitelist now works — received body=%q from source=%q; update this test to assert correct filtering", got.Body, got.Attributes["source"])
-	case <-time.After(400 * time.Millisecond):
-		// Expected: nothing received because the regex is not a valid glob pattern.
+	// The regex whitelist is not a valid glob; the receiver falls back to dir/*
+	// so both files must be ingested.
+	received := map[string]bool{}
+	deadline := time.After(3 * time.Second)
+	for len(received) < 2 {
+		select {
+		case got := <-output.Received:
+			name, _ := got.Attributes["log.file.name"].(string)
+			received[name] = true
+		case <-deadline:
+			t.Fatalf("timeout waiting for files; got: %v", received)
+		}
 	}
+	require.True(t, received["syslog.log"], "expected syslog.log to be ingested")
+	require.True(t, received["auth"], "expected auth to be ingested")
 }
 
 // TestMonitorDirectoryEmptyWhitelist mirrors the real-life Splunk_TA_nix stanza after the

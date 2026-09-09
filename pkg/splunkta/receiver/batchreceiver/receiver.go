@@ -5,6 +5,7 @@ package batchreceiver
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
@@ -82,10 +83,15 @@ func (t batch) InputConfig(config component.Config) operator.Config {
 	}
 	allowlist := path
 	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil {
-		allowlist = filepath.Join(path, w.Value)
+		if isGlobPattern(w.Value) {
+			allowlist = filepath.Join(path, w.Value)
+		} else {
+			// empty or Splunk regex — match all files under the directory
+			allowlist = filepath.Join(path, "*")
+		}
 	}
 	oc.Include = []string{allowlist}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil {
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isGlobPattern(b.Value) {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
 	}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
@@ -117,6 +123,14 @@ func (t batch) InputConfig(config component.Config) operator.Config {
 	}
 
 	return operator.NewConfig(oc)
+}
+
+// isGlobPattern reports whether s is a glob pattern suitable for filelog's
+// Include/Exclude fields. Splunk whitelist/blacklist values can be either
+// glob patterns (containing *, ?, or [) or PCRE regexes (containing (, |,
+// $, or \). The latter are not valid globs and must not be passed to filelog.
+func isGlobPattern(s string) bool {
+	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\")
 }
 
 func renameMetadata() []operator.Config {

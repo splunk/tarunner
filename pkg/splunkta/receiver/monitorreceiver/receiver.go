@@ -92,15 +92,14 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		// Path is already a glob pattern — use it as-is; whitelist is ignored
 		// because there is no sensible directory to join it against.
 		allowlist = path
-	case w != nil && w.Value != "":
+	case w != nil && isGlobPattern(w.Value):
 		// whitelist is a glob pattern relative to the monitored directory
-		// (e.g. "*.log"). Splunk also supports regex here, but glob is the
-		// common case and what filelog's Include field accepts.
+		// (e.g. "*.log").
 		allowlist = filepath.Join(path, w.Value)
 	case w != nil:
-		// whitelist param is present but empty: the stanza targets a directory
-		// and wants all files inside it. A bare directory is not a valid filelog
-		// glob — append /* to match files directly under the directory.
+		// whitelist param is present but either empty or a Splunk regex (which
+		// is not a valid filelog glob). In both cases match all files directly
+		// under the directory.
 		allowlist = filepath.Join(path, "*")
 	default:
 		// No whitelist param at all: path may be a specific file, a directory,
@@ -108,7 +107,7 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		allowlist = path
 	}
 	oc.Include = []string{allowlist}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && b.Value != "" {
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isGlobPattern(b.Value) {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
 	}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
@@ -140,6 +139,14 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	}
 
 	return operator.NewConfig(oc)
+}
+
+// isGlobPattern reports whether s is a glob pattern suitable for filelog's
+// Include/Exclude fields. Splunk whitelist/blacklist values can be either
+// glob patterns (containing *, ?, or [) or PCRE regexes (containing (, |,
+// $, or \). The latter are not valid globs and must not be passed to filelog.
+func isGlobPattern(s string) bool {
+	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\")
 }
 
 func renameMetadata() []operator.Config {
