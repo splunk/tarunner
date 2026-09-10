@@ -4,6 +4,7 @@
 package monitorreceiver
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/filter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/split"
@@ -46,6 +48,16 @@ func createDefaultConfig() *Config {
 func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(Config)
 	var operators []operator.Config
+
+	// Insert PCRE whitelist/blacklist filters before any other processing.
+	// The log.file.path attribute is set by filelog and available here.
+	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && isPCREPattern(w.Value) {
+		operators = append(operators, createWhitelistFilterOperator(w.Value))
+	}
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isPCREPattern(b.Value) {
+		operators = append(operators, createBlacklistFilterOperator(b.Value))
+	}
+
 	operators = append(operators, createSetSourceOperator())
 
 	for _, p := range rcfg.Props {
@@ -63,6 +75,22 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	return adapter.BaseConfig{
 		Operators: operators,
 	}
+}
+
+// createWhitelistFilterOperator drops entries whose log.file.path does NOT match the regex.
+// filter drops entries when expression is true — drop if path does NOT match whitelist.
+func createWhitelistFilterOperator(regex string) operator.Config {
+	c := filter.NewConfigWithID("whitelist-filter")
+	c.Expression = fmt.Sprintf(`!(attributes["log.file.path"] matches %q)`, regex)
+	return operator.NewConfig(c)
+}
+
+// createBlacklistFilterOperator drops entries whose log.file.path matches the regex.
+// filter drops entries when expression is true — drop if path matches blacklist.
+func createBlacklistFilterOperator(regex string) operator.Config {
+	c := filter.NewConfigWithID("blacklist-filter")
+	c.Expression = fmt.Sprintf(`attributes["log.file.path"] matches %q`, regex)
+	return operator.NewConfig(c)
 }
 
 func createSetSourceOperator() operator.Config {
@@ -162,6 +190,12 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 // $, or \). The latter are not valid globs and must not be passed to filelog.
 func isGlobPattern(s string) bool {
 	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\")
+}
+
+// isPCREPattern reports whether s looks like a PCRE regex — i.e. contains
+// characters that are meaningful in PCRE but not in glob patterns.
+func isPCREPattern(s string) bool {
+	return s != "" && strings.ContainsAny(s, "(|$\\.+?^")
 }
 
 func renameMetadata() []operator.Config {

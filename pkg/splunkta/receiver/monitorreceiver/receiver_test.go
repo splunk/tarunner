@@ -33,10 +33,9 @@ import (
 //	whitelist=(\.log|log$|messages|secure|auth|mesg$|cron$|acpid$|\.out)
 //	blacklist=(lastlog|anaconda\.syslog)
 //
-// The whitelist/blacklist values are PCRE regexes, not globs. The receiver detects
-// this and falls back to dir/* so that all files are ingested (the TA overlay is
-// expected to narrow scope via a glob whitelist if needed, but must not break the
-// common case where no overlay whitelist is set).
+// The whitelist/blacklist values are PCRE regexes. InputConfig sets include=dir/* and
+// BaseConfig wires a filter operator to apply the regex against log.file.path.
+// This test only exercises InputConfig (include path), not the full filter pipeline.
 func TestMonitorDirectoryWithSplunkRegexWhitelist(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -249,4 +248,85 @@ func TestRenameMetadata(t *testing.T) {
 	require.Equal(t, "src", result.Attributes["com.splunk.source"])
 	require.Equal(t, "srctype", result.Attributes["com.splunk.sourcetype"])
 	require.Equal(t, "foo", result.Attributes["host.name"])
+}
+
+// TestPCREWhitelistFilter verifies that createWhitelistFilterOperator passes entries
+// whose log.file.path matches the regex and drops those that don't.
+func TestPCREWhitelistFilter(t *testing.T) {
+	const regex = `(\.log|log$|messages|secure|auth)`
+	ops := []operator.Config{createWhitelistFilterOperator(regex)}
+	output := testutil.NewFakeOutput(t)
+	pipe, err := pipeline.Config{
+		Operators:     ops,
+		DefaultOutput: output,
+	}.Build(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
+	require.NoError(t, pipe.Start(nil))
+	defer func() { require.NoError(t, pipe.Stop()) }()
+
+	send := func(path string) {
+		require.NoError(t, pipe.Operators()[0].Process(context.Background(), &entry.Entry{
+			Attributes: map[string]any{"log.file.path": path},
+		}))
+	}
+
+	send("/var/log/syslog.log") // matches \.log — should pass
+	send("/var/log/auth")       // matches auth — should pass
+	send("/var/log/wtmp")       // does not match any alternative — should be dropped
+
+	// Collect with timeout
+	received := map[string]bool{}
+	deadline := time.After(500 * time.Millisecond)
+	for {
+		select {
+		case e := <-output.Received:
+			received[e.Attributes["log.file.path"].(string)] = true
+		case <-deadline:
+			goto done
+		}
+	}
+done:
+	require.True(t, received["/var/log/syslog.log"], "syslog.log should pass whitelist")
+	require.True(t, received["/var/log/auth"], "auth should pass whitelist")
+	require.False(t, received["/var/log/wtmp"], "wtmp should be dropped by whitelist")
+}
+
+// TestPCREBlacklistFilter verifies that createBlacklistFilterOperator drops entries
+// whose log.file.path matches the regex and passes those that don't.
+func TestPCREBlacklistFilter(t *testing.T) {
+	const regex = `(lastlog|anaconda\.syslog)`
+	ops := []operator.Config{createBlacklistFilterOperator(regex)}
+	output := testutil.NewFakeOutput(t)
+	pipe, err := pipeline.Config{
+		Operators:     ops,
+		DefaultOutput: output,
+	}.Build(componenttest.NewNopTelemetrySettings())
+	require.NoError(t, err)
+	require.NoError(t, pipe.Start(nil))
+	defer func() { require.NoError(t, pipe.Stop()) }()
+
+	send := func(path string) {
+		require.NoError(t, pipe.Operators()[0].Process(context.Background(), &entry.Entry{
+			Attributes: map[string]any{"log.file.path": path},
+		}))
+	}
+
+	send("/var/log/syslog.log")      // not in blacklist — should pass
+	send("/var/log/lastlog")         // matches blacklist — should be dropped
+	send("/var/log/anaconda.syslog") // matches blacklist — should be dropped
+
+	received := map[string]bool{}
+	deadline := time.After(500 * time.Millisecond)
+	for {
+		select {
+		case e := <-output.Received:
+			received[e.Attributes["log.file.path"].(string)] = true
+		case <-deadline:
+			goto done
+		}
+	}
+done:
+	require.True(t, received["/var/log/syslog.log"], "syslog.log should pass blacklist")
+	require.False(t, received["/var/log/lastlog"], "lastlog should be dropped by blacklist")
+	require.False(t, received["/var/log/anaconda.syslog"], "anaconda.syslog should be dropped by blacklist")
 }
