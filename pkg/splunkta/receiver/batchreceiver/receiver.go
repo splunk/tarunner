@@ -43,10 +43,10 @@ func (batch) BaseConfig(cfg component.Config) adapter.BaseConfig {
 
 	// Insert PCRE whitelist/blacklist filters before any other processing.
 	// The log.file.path attribute is set by filelog and available here.
-	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && w.Value != "" && !filter.IsGlobPattern(w.Value) {
+	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && w.Value != "" {
 		operators = append(operators, filter.NewWhitelistOperator(w.Value))
 	}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && b.Value != "" && !filter.IsGlobPattern(b.Value) {
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && b.Value != "" {
 		operators = append(operators, filter.NewBlacklistOperator(b.Value))
 	}
 
