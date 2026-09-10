@@ -4,7 +4,6 @@
 package monitorreceiver
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/filter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/split"
@@ -23,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkta/operator/prop"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/filter"
 	"github.com/splunk/tarunner/pkg/splunkta/script"
 )
 
@@ -51,11 +50,11 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 
 	// Insert PCRE whitelist/blacklist filters before any other processing.
 	// The log.file.path attribute is set by filelog and available here.
-	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && isPCREPattern(w.Value) {
-		operators = append(operators, createWhitelistFilterOperator(w.Value))
+	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && filter.IsPCREPattern(w.Value) {
+		operators = append(operators, filter.NewWhitelistOperator(w.Value))
 	}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isPCREPattern(b.Value) {
-		operators = append(operators, createBlacklistFilterOperator(b.Value))
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && filter.IsPCREPattern(b.Value) {
+		operators = append(operators, filter.NewBlacklistOperator(b.Value))
 	}
 
 	operators = append(operators, createSetSourceOperator())
@@ -75,22 +74,6 @@ func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	return adapter.BaseConfig{
 		Operators: operators,
 	}
-}
-
-// createWhitelistFilterOperator drops entries whose log.file.path does NOT match the regex.
-// filter drops entries when expression is true — drop if path does NOT match whitelist.
-func createWhitelistFilterOperator(regex string) operator.Config {
-	c := filter.NewConfigWithID("whitelist-filter")
-	c.Expression = fmt.Sprintf(`!(attributes["log.file.path"] matches %q)`, regex)
-	return operator.NewConfig(c)
-}
-
-// createBlacklistFilterOperator drops entries whose log.file.path matches the regex.
-// filter drops entries when expression is true — drop if path matches blacklist.
-func createBlacklistFilterOperator(regex string) operator.Config {
-	c := filter.NewConfigWithID("blacklist-filter")
-	c.Expression = fmt.Sprintf(`attributes["log.file.path"] matches %q`, regex)
-	return operator.NewConfig(c)
 }
 
 func createSetSourceOperator() operator.Config {
@@ -121,7 +104,7 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		// Path is already a glob pattern — use it as-is; whitelist is ignored
 		// because there is no sensible directory to join it against.
 		allowlist = path
-	case w != nil && isGlobPattern(w.Value):
+	case w != nil && filter.IsGlobPattern(w.Value):
 		// whitelist is a glob pattern relative to the monitored directory
 		// (e.g. "*.log").
 		allowlist = filepath.Join(path, w.Value)
@@ -141,14 +124,14 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		}
 	}
 	oc.Include = []string{allowlist}
-	t.logger.Info("monitor receiver include pattern",
+	t.logger.Debug("monitor receiver include pattern",
 		zap.String("stanza", rcfg.Input.Configuration.Stanza.Name),
 		zap.String("path", path),
 		zap.String("include", allowlist),
 	)
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isGlobPattern(b.Value) {
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && filter.IsGlobPattern(b.Value) {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
-		t.logger.Info("monitor receiver exclude pattern",
+		t.logger.Debug("monitor receiver exclude pattern",
 			zap.String("stanza", rcfg.Input.Configuration.Stanza.Name),
 			zap.String("exclude", oc.Exclude[0]),
 		)
@@ -182,20 +165,6 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 	}
 
 	return operator.NewConfig(oc)
-}
-
-// isGlobPattern reports whether s is a glob pattern suitable for filelog's
-// Include/Exclude fields. Splunk whitelist/blacklist values can be either
-// glob patterns (containing *, ?, or [) or PCRE regexes (containing (, |,
-// $, or \). The latter are not valid globs and must not be passed to filelog.
-func isGlobPattern(s string) bool {
-	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\")
-}
-
-// isPCREPattern reports whether s looks like a PCRE regex — i.e. contains
-// characters that are meaningful in PCRE but not in glob patterns.
-func isPCREPattern(s string) bool {
-	return s != "" && strings.ContainsAny(s, "(|$\\.+?^")
 }
 
 func renameMetadata() []operator.Config {

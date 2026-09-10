@@ -4,6 +4,7 @@
 package batchreceiver
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkta/operator/prop"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/filter"
 	"github.com/splunk/tarunner/pkg/splunkta/script"
 )
 
@@ -45,6 +47,16 @@ func createDefaultConfig() *Config {
 func (batch) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(Config)
 	var operators []operator.Config
+
+	// Insert PCRE whitelist/blacklist filters before any other processing.
+	// The log.file.path attribute is set by filelog and available here.
+	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && filter.IsPCREPattern(w.Value) {
+		operators = append(operators, filter.NewWhitelistOperator(w.Value))
+	}
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && filter.IsPCREPattern(b.Value) {
+		operators = append(operators, filter.NewBlacklistOperator(b.Value))
+	}
+
 	operators = append(operators, createSetSourceOperator())
 
 	for _, p := range rcfg.Props {
@@ -81,18 +93,36 @@ func (t batch) InputConfig(config component.Config) operator.Config {
 		t.logger.Error("error reading command", zap.Error(err))
 		return operator.NewConfig(oc)
 	}
-	allowlist := path
-	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil {
-		if isGlobPattern(w.Value) {
-			allowlist = filepath.Join(path, w.Value)
-		} else {
-			// empty or Splunk regex — match all files under the directory
+	pathIsGlob := strings.ContainsAny(path, "*?[")
+	w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist")
+	var allowlist string
+	switch {
+	case pathIsGlob:
+		allowlist = path
+	case w != nil && filter.IsGlobPattern(w.Value):
+		allowlist = filepath.Join(path, w.Value)
+	case w != nil:
+		// empty or Splunk regex — match all files under the directory
+		allowlist = filepath.Join(path, "*")
+	default:
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
 			allowlist = filepath.Join(path, "*")
+		} else {
+			allowlist = path
 		}
 	}
 	oc.Include = []string{allowlist}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && isGlobPattern(b.Value) {
+	t.logger.Debug("batch receiver include pattern",
+		zap.String("stanza", rcfg.Input.Configuration.Stanza.Name),
+		zap.String("path", path),
+		zap.String("include", allowlist),
+	)
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && filter.IsGlobPattern(b.Value) {
 		oc.Exclude = []string{filepath.Join(path, b.Value)}
+		t.logger.Debug("batch receiver exclude pattern",
+			zap.String("stanza", rcfg.Input.Configuration.Stanza.Name),
+			zap.String("exclude", oc.Exclude[0]),
+		)
 	}
 	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
 		// TODO: find a way to run host detection when requested.
@@ -123,14 +153,6 @@ func (t batch) InputConfig(config component.Config) operator.Config {
 	}
 
 	return operator.NewConfig(oc)
-}
-
-// isGlobPattern reports whether s is a glob pattern suitable for filelog's
-// Include/Exclude fields. Splunk whitelist/blacklist values can be either
-// glob patterns (containing *, ?, or [) or PCRE regexes (containing (, |,
-// $, or \). The latter are not valid globs and must not be passed to filelog.
-func isGlobPattern(s string) bool {
-	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\")
 }
 
 func renameMetadata() []operator.Config {

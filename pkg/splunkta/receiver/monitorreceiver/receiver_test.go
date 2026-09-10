@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkta/conf"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/filter"
 )
 
 // TestMonitorDirectoryWithSplunkRegexWhitelist tests the exact Splunk_TA_nix default stanza
@@ -254,7 +255,7 @@ func TestRenameMetadata(t *testing.T) {
 // whose log.file.path matches the regex and drops those that don't.
 func TestPCREWhitelistFilter(t *testing.T) {
 	const regex = `(\.log|log$|messages|secure|auth)`
-	ops := []operator.Config{createWhitelistFilterOperator(regex)}
+	ops := []operator.Config{filter.NewWhitelistOperator(regex)}
 	output := testutil.NewFakeOutput(t)
 	pipe, err := pipeline.Config{
 		Operators:     ops,
@@ -295,7 +296,7 @@ done:
 // whose log.file.path matches the regex and passes those that don't.
 func TestPCREBlacklistFilter(t *testing.T) {
 	const regex = `(lastlog|anaconda\.syslog)`
-	ops := []operator.Config{createBlacklistFilterOperator(regex)}
+	ops := []operator.Config{filter.NewBlacklistOperator(regex)}
 	output := testutil.NewFakeOutput(t)
 	pipe, err := pipeline.Config{
 		Operators:     ops,
