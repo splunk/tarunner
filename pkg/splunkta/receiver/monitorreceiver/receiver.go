@@ -4,21 +4,17 @@
 package monitorreceiver
 
 import (
-	"path/filepath"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/file"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/move"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/transformer/noop"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/split"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/trim"
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
 	"github.com/splunk/tarunner/pkg/splunkta/operator/prop"
+	"github.com/splunk/tarunner/pkg/splunkta/receiver/filter"
 	"github.com/splunk/tarunner/pkg/splunkta/script"
 )
 
@@ -44,6 +40,16 @@ func createDefaultConfig() *Config {
 func (monitor) BaseConfig(cfg component.Config) adapter.BaseConfig {
 	rcfg := cfg.(Config)
 	var operators []operator.Config
+
+	// Insert PCRE whitelist/blacklist filters before any other processing.
+	// The log.file.path attribute is set by filelog and available here.
+	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil && w.Value != "" {
+		operators = append(operators, filter.NewWhitelistOperator(w.Value))
+	}
+	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil && b.Value != "" {
+		operators = append(operators, filter.NewBlacklistOperator(b.Value))
+	}
+
 	operators = append(operators, createSetSourceOperator())
 
 	for _, p := range rcfg.Props {
@@ -79,42 +85,8 @@ func (t monitor) InputConfig(config component.Config) operator.Config {
 		t.logger.Error("error reading command", zap.Error(err))
 		return operator.NewConfig(oc)
 	}
-	allowlist := path
-	if w := rcfg.Input.Configuration.Stanza.Params.Get("whitelist"); w != nil {
-		allowlist = filepath.Join(path, w.Value)
-	}
-	oc.Include = []string{allowlist}
-	if b := rcfg.Input.Configuration.Stanza.Params.Get("blacklist"); b != nil {
-		oc.Exclude = []string{filepath.Join(path, b.Value)}
-	}
-	if hostParam := rcfg.Input.Configuration.Stanza.Params.Get("host"); hostParam != nil {
-		// TODO: find a way to run host detection when requested.
-		oc.Attributes["host"] = helper.ExprStringConfig(hostParam.Value)
-	}
-
-	if indexParam := rcfg.Input.Configuration.Stanza.Params.Get("index"); indexParam != nil {
-		oc.Attributes["index"] = helper.ExprStringConfig(indexParam.Value)
-	}
-
-	if sourceTypeParam := rcfg.Input.Configuration.Stanza.Params.Get("sourcetype"); sourceTypeParam != nil {
-		oc.Attributes["sourcetype"] = helper.ExprStringConfig(sourceTypeParam.Value)
-	}
-
-	if sourceParam := rcfg.Input.Configuration.Stanza.Params.Get("source"); sourceParam != nil {
-		oc.Attributes["source"] = helper.ExprStringConfig(sourceParam.Value)
-	}
-
-	oc.IncludeFilePath = true
-	oc.Encoding = "utf-8"
-	oc.StartAt = "beginning"
-	oc.SplitConfig = split.Config{
-		LineStartPattern: "^",
-	}
-	oc.TrimConfig = trim.Config{
-		PreserveLeading:  true,
-		PreserveTrailing: true,
-	}
-
+	filter.ApplyIncludeExclude(oc, path, rcfg.Input.Configuration.Stanza, "monitor", t.logger)
+	filter.ApplyStanzaConfig(oc, rcfg.Input.Configuration.Stanza)
 	return operator.NewConfig(oc)
 }
 
