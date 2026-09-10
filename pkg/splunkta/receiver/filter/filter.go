@@ -24,10 +24,11 @@ import (
 
 // IsGlobPattern reports whether s is a glob pattern suitable for filelog's
 // Include/Exclude fields. Splunk whitelist/blacklist values can be either
-// glob patterns (containing *, ?, or [) or PCRE regexes (containing (, |,
-// $, or \). The latter are not valid globs and must not be passed to filelog.
+// glob patterns (containing *, ?, or [) or PCRE regexes. A value is treated
+// as a glob only when it contains glob metacharacters and none of the
+// characters that are meaningful in PCRE but not in globs.
 func IsGlobPattern(s string) bool {
-	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\")
+	return s != "" && strings.ContainsAny(s, "*?[") && !strings.ContainsAny(s, "(|$\\.+^")
 }
 
 // NewWhitelistOperator returns a filter operator that drops entries whose
@@ -58,7 +59,9 @@ func ApplyIncludeExclude(oc *file.Config, path string, stanza conf.Stanza, recei
 	case w != nil && IsGlobPattern(w.Value):
 		allowlist = filepath.Join(path, w.Value)
 	case w != nil:
-		// whitelist param present but empty or a Splunk PCRE regex — match all files under the directory
+		// whitelist param is present but either empty or a PCRE regex (not a valid
+		// filelog glob). Expand to dir/* so filelog picks up all files; the PCRE
+		// regex is applied as a filter operator in BaseConfig.
 		allowlist = filepath.Join(path, "*")
 	default:
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
