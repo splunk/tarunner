@@ -5,7 +5,7 @@ go 1.26.6
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.160.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/splunkhecreceiver v0.159.0
-	github.com/signalfx/splunk-otel-collector/pkg/splunkta v0.0.0-00010101000000-000000000000
+	github.com/signalfx/splunk-otel-collector/pkg/splunkta v0.0.0-20260911190235-9720dd41ce4f
 	go.opentelemetry.io/collector/component v1.66.0
 	go.opentelemetry.io/collector/component/componenttest v0.160.0
 	go.opentelemetry.io/collector/config/configopaque v1.66.0
@@ -126,8 +126,3 @@ require (
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/multierr v1.11.0 // indirect
 )
-
-// Temporary: points at the SOC fork branch that holds the moved core
-// (signalfx/splunk-otel-collector#8043). Replace with a real pin on
-// github.com/signalfx/splunk-otel-collector/pkg/splunkta once that PR merges.
-replace github.com/signalfx/splunk-otel-collector/pkg/splunkta => github.com/dmitryax/splunk-otel-collector/pkg/splunkta v0.0.0-20260910181618-46b6a492c1db
