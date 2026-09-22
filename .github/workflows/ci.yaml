@@ -14,7 +14,7 @@ env:
 jobs:
   tidy:
     name: tidy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-environment
@@ -29,7 +29,7 @@ jobs:
 
   gofmt:
     name: gofmt
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-environment
@@ -44,7 +44,7 @@ jobs:
 
   lint:
     name: lint
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-environment
@@ -61,7 +61,7 @@ jobs:
           make lint
   build:
     timeout-minutes: 30
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-environment
@@ -84,7 +84,7 @@ jobs:
 
   coverage:
     needs: [build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-environment
@@ -102,7 +102,7 @@ jobs:
 #          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish-stable:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'splunk/tarunner'
     needs: test
     permissions:
