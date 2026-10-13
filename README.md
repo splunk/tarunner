@@ -1,5 +1,10 @@
 # Technical Addon (TA) Runner
 
+> [!WARNING]
+> This repository is archived. Development has moved to
+> [`pkg/splunkta`](https://github.com/signalfx/splunk-otel-collector/tree/main/pkg/splunkta)
+> in the `splunk-otel-collector` repository.
+
 Run technical addons with this simple utility program.
 
 The TA runner can interpret `inputs.conf`, `transforms.conf` and `props.conf` files and runs technical addons according to these settings.
